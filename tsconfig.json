@@ -2,7 +2,11 @@
   "compilerOptions": {
     "paths": {
       "@/*": [
+<<<<<<< HEAD
         "./*"
+=======
+        "./src/*"
+>>>>>>> 6212fcc7214d224274d6f6a4eab76c3b3a2b9c20
       ]
     }
   },
@@ -13,4 +17,8 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ]
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 6212fcc7214d224274d6f6a4eab76c3b3a2b9c20
