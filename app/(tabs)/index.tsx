@@ -1,8 +1,9 @@
 // app/(tabs)/index.tsx
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Animated,
@@ -105,6 +106,32 @@ export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [scaleAnim] = useState(new Animated.Value(0.95));
   const [opacityAnim] = useState(new Animated.Value(0));
+  const [isGuest, setIsGuest] = useState(false);
+
+  useEffect(() => {
+    checkUserStatus();
+  }, []);
+
+  const checkUserStatus = async () => {
+    try {
+      const guestStatus = await AsyncStorage.getItem("isGuest");
+      if (guestStatus === "true") {
+        setIsGuest(true);
+        return;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/(auth)/sign-in");
+      }
+    } catch (error) {
+      console.error("Error checking user status:", error);
+      router.replace("/(auth)/sign-in");
+    }
+  };
 
   const filteredProviders = providers.filter((provider) => {
     const matchesRegion =
@@ -158,6 +185,33 @@ export default function HomeScreen() {
   const handleLogout = async () => {
     closeMenu();
 
+    // Different flow for guest vs. authenticated user
+    if (isGuest) {
+      Alert.alert(
+        "Exit Guest Mode",
+        "Are you sure you want to leave? You'll need to sign in to access your account.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Exit",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                // Just clear guest flag and redirect
+                await AsyncStorage.removeItem("isGuest");
+                router.replace("/(auth)/sign-in");
+              } catch (error) {
+                console.error("Guest logout error:", error);
+                Alert.alert("Error", "Failed to exit guest mode");
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    // Regular user logout flow
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -182,6 +236,23 @@ export default function HomeScreen() {
 
   const handleProfile = () => {
     closeMenu();
+
+    // Guest users can't access profile
+    if (isGuest) {
+      Alert.alert(
+        "Guest User",
+        "Please sign in or create an account to access your profile.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Sign In",
+            onPress: () => router.push("/(auth)/sign-in"),
+          },
+        ],
+      );
+      return;
+    }
+
     router.push("/profile/profile");
   };
 
@@ -199,8 +270,12 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.greeting}>Good morning,</Text>
-            <Text style={styles.title}>Find Trusted Services</Text>
+            <Text style={styles.greeting}>
+              {isGuest ? "Welcome," : "Good morning,"}
+            </Text>
+            <Text style={styles.title}>
+              {isGuest ? "Guest User" : "Find Trusted Services"}
+            </Text>
           </View>
 
           {/* User Profile Button */}
@@ -252,20 +327,32 @@ export default function HomeScreen() {
           >
             <View style={styles.menuHeader}>
               <Ionicons name="person-circle" size={48} color={PRIMARY_TEAL} />
-              <Text style={styles.menuTitle}>My Account</Text>
+              <Text style={styles.menuTitle}>
+                {isGuest ? "Guest" : "My Account"}
+              </Text>
             </View>
 
             <View style={styles.menuDivider} />
 
             <TouchableOpacity style={styles.menuItem} onPress={handleProfile}>
-              <Ionicons name="person-outline" size={22} color={TEXT_DARK} />
-              <Text style={styles.menuItemText}>Profile</Text>
+              <Ionicons
+                name={isGuest ? "log-in-outline" : "person-outline"}
+                size={22}
+                color={TEXT_DARK}
+              />
+              <Text style={styles.menuItemText}>
+                {isGuest ? "Sign In" : "Profile"}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={22} color="#E74C3C" />
+              <Ionicons
+                name={isGuest ? "log-out-outline" : "log-out-outline"}
+                size={22}
+                color={isGuest ? "#E74C3C" : "#E74C3C"}
+              />
               <Text style={[styles.menuItemText, styles.logoutText]}>
-                Logout
+                {isGuest ? "Exit Guest Mode" : "Logout"}
               </Text>
             </TouchableOpacity>
           </Animated.View>

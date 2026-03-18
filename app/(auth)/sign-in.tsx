@@ -1,5 +1,7 @@
+// app/(auth)/sign-in.tsx
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -68,6 +70,8 @@ const LoginScreen: React.FC = () => {
 
       if (data.session) {
         console.log("Login successful:", data.user);
+        // Clear guest status on real login
+        await AsyncStorage.removeItem("isGuest");
         router.replace("/(tabs)");
       }
     } catch (error) {
@@ -77,6 +81,25 @@ const LoginScreen: React.FC = () => {
       setIsLoading(false);
     }
   }, [formData, router]);
+
+  const handleGuestLogin = useCallback(async () => {
+    Alert.alert(
+      "Continue as Guest",
+      "You'll have limited access. Some features require an account.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Continue",
+          style: "default",
+          onPress: async () => {
+            // Set guest flag BEFORE navigating
+            await AsyncStorage.setItem("isGuest", "true");
+            router.replace("/(tabs)");
+          },
+        },
+      ],
+    );
+  }, [router]);
 
   const handleSignUp = useCallback(() => {
     router.push("/(auth)/sign-up");
@@ -191,9 +214,31 @@ const LoginScreen: React.FC = () => {
                   {isLoading ? "Signing In..." : "Sign In"}
                 </Text>
               </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Guest Login Button */}
+              <TouchableOpacity
+                style={styles.guestButton}
+                onPress={handleGuestLogin}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={PRIMARY_TEAL}
+                  style={styles.guestIcon}
+                />
+                <Text style={styles.guestButtonText}>Continue as Guest</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Sign Up Link - Now inside the card area for better grouping */}
+            {/* Sign Up Link */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
               <TouchableOpacity onPress={handleSignUp}>
@@ -343,6 +388,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: BORDER_COLOR,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    color: TEXT_MUTED,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  guestButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: PRIMARY_TEAL,
+    backgroundColor: "transparent",
+  },
+  guestIcon: {
+    marginRight: 8,
+  },
+  guestButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: PRIMARY_TEAL,
   },
   footer: {
     flexDirection: "row",
