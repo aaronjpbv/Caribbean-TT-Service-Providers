@@ -199,7 +199,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.greeting}>Good morning,</Text>
+            <Text style={styles.greeting}>Blue Color </Text>
             <Text style={styles.title}>Find Trusted Services</Text>
           </View>
 
