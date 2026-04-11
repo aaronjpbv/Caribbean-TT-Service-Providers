@@ -15,7 +15,10 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
-        <Stack.Screen name="provider/[id]" options={{ title: "Details" }} />
+        <Stack.Screen
+          name="provider/[id]"
+          options={{ title: "Details", headerShown: false }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
     </>

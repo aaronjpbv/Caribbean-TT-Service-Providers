@@ -1,10 +1,20 @@
+// utils/supabase.ts
 import { createClient } from "@supabase/supabase-js";
 import "expo-sqlite/localStorage/install";
 
-const supabaseUrl = "https://eszujhyytdrdsvwxdofl.supabase.co";
-const supabasePublishableKey = "sb_publishable_pSL1CUpXeRVDbte_iY4dnw_VxM0SEB0";
+// Use environment variables
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+// Validate that env vars are set
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    "Missing Supabase environment variables. Please check your .env file.\n" +
+      "Make sure you have EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY set.",
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: localStorage,
     autoRefreshToken: true,

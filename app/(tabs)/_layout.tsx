@@ -1,33 +1,34 @@
 // app/(tabs)/_layout.tsx
-import { Tabs } from "expo-router";
-import { Home, Star } from "lucide-react-native";
+import { Stack } from "expo-router";
 
-export default function TabLayout() {
-  // This is NOT a screen
-  // It's a TAB BAR CONTAINER
-
+export default function StackLayout() {
   return (
-    <Tabs
+    <Stack
       screenOptions={{
-        tabBarActiveTintColor: "#006994",
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: "#006994",
+        },
+        headerTintColor: "#fff",
+        headerTitleStyle: {
+          fontWeight: "bold",
+        },
       }}
     >
-      {/* These ARE the screens inside tabs */}
-      <Tabs.Screen
+      <Stack.Screen
         name="index"
         options={{
           title: "Home",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <Home color={color} />,
+          headerShown: false, // No header for home screen
         }}
       />
-      <Tabs.Screen
+      <Stack.Screen
         name="favorites"
         options={{
           title: "Favorites",
-          tabBarIcon: ({ color }) => <Star color={color} />,
+          headerShown: true,
         }}
       />
-    </Tabs>
+    </Stack>
   );
 }
