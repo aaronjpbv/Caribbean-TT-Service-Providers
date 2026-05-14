@@ -4,24 +4,16 @@ import { Stack } from "expo-router";
 export default function StackLayout() {
   return (
     <Stack
-      screenOptions={{
-        headerShown: true,
-        headerStyle: {
-<<<<<<< HEAD
-          backgroundColor: "#E98260",  
-        },
-        headerTintColor: "#fff",
-        headerTitleStyle: {
-          fontWeight: "bold", 
-=======
-          backgroundColor: "#006994",
-        },
-        headerTintColor: "#fff",
-        headerTitleStyle: {
-          fontWeight: "bold",
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
-        },
-      }}
+screenOptions={{
+  headerShown: true,
+  headerStyle: {
+    backgroundColor: "#E98260",
+  },
+  headerTintColor: "#fff",
+  headerTitleStyle: {
+    fontWeight: "bold",
+  },
+}}
     >
       <Stack.Screen
         name="index"
