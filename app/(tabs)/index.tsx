@@ -43,6 +43,7 @@ const categories = [
   { id: "security", name: "Security", icon: "shield-checkmark-outline" },
 ];
 
+<<<<<<< HEAD
 // Define Provider type
 type Provider = {
   id: string;
@@ -59,6 +60,64 @@ const regions = ["All", "North", "Central", "South", "East", "West", "Tobago"];
 
 export default function HomeScreen() {
   const [providers, setProviders] = useState<Provider[]>([]);
+=======
+const regions = ["All", "North", "South", "East", "West", "Tobago"];
+
+const providers = [
+  {
+    id: "1",
+    name: "JJ Plumbing",
+    category: "Plumbing",
+    region: "North",
+    rating: 4.8,
+    reviews: 124,
+    verified: true,
+    image: null,
+  },
+  {
+    id: "2",
+    name: "Cool Breeze AC",
+    category: "HVAC",
+    region: "South",
+    rating: 4.9,
+    reviews: 89,
+    verified: true,
+    image: null,
+  },
+  {
+    id: "3",
+    name: "Harry Landscaping",
+    category: "Lawn Care",
+    region: "East",
+    rating: 4.5,
+    reviews: 56,
+    verified: false,
+    image: null,
+  },
+  {
+    id: "4",
+    name: "Sparky Electrical",
+    category: "Electrical",
+    region: "West",
+    rating: 4.7,
+    reviews: 203,
+    verified: true,
+    image: null,
+  },
+  {
+    id: "5",
+    name: "Clean Pro Services",
+    category: "Cleaning",
+    region: "North",
+    rating: 4.6,
+    reviews: 78,
+    verified: true,
+    image: null,
+  },
+];
+
+export default function HomeScreen() {
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   const router = useRouter();
   const [selectedRegion, setSelectedRegion] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,6 +127,7 @@ export default function HomeScreen() {
   const [opacityAnim] = useState(new Animated.Value(0));
   const [isGuest, setIsGuest] = useState(false);
 
+<<<<<<< HEAD
   // Fetch providers and check user status
   useEffect(() => {
     const fetchProviders = async () => {
@@ -102,6 +162,33 @@ export default function HomeScreen() {
     checkUserStatus();
   }, []);
 
+=======
+  useEffect(() => {
+    checkUserStatus();
+  }, []);
+
+  const checkUserStatus = async () => {
+    try {
+      const guestStatus = await AsyncStorage.getItem("isGuest");
+      if (guestStatus === "true") {
+        setIsGuest(true);
+        return;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/(auth)/sign-in");
+      }
+    } catch (error) {
+      console.error("Error checking user status:", error);
+      router.replace("/(auth)/sign-in");
+    }
+  };
+
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   const filteredProviders = providers.filter((provider) => {
     const matchesRegion =
       selectedRegion === "All" || provider.region === selectedRegion;
@@ -154,6 +241,10 @@ export default function HomeScreen() {
   const handleLogout = async () => {
     closeMenu();
 
+<<<<<<< HEAD
+=======
+    // Different flow for guest vs. authenticated user
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
     if (isGuest) {
       Alert.alert(
         "Exit Guest Mode",
@@ -165,6 +256,10 @@ export default function HomeScreen() {
             style: "destructive",
             onPress: async () => {
               try {
+<<<<<<< HEAD
+=======
+                // Just clear guest flag and redirect
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
                 await AsyncStorage.removeItem("isGuest");
                 router.replace("/(auth)/sign-in");
               } catch (error) {
@@ -178,6 +273,10 @@ export default function HomeScreen() {
       return;
     }
 
+<<<<<<< HEAD
+=======
+    // Regular user logout flow
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -203,6 +302,10 @@ export default function HomeScreen() {
   const handleProfile = () => {
     closeMenu();
 
+<<<<<<< HEAD
+=======
+    // Guest users can't access profile
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
     if (isGuest) {
       Alert.alert(
         "Guest User",
@@ -221,6 +324,15 @@ export default function HomeScreen() {
     router.push("/profile/profile");
   };
 
+<<<<<<< HEAD
+=======
+  // Split categories into rows of 3
+  const categoryRows = [];
+  for (let i = 0; i < categories.length; i += 3) {
+    categoryRows.push(categories.slice(i, i + 3));
+  }
+
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={PRIMARY_TEAL} />
@@ -229,7 +341,11 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
+<<<<<<< HEAD
             <Text style={styles.greeting}>Blue Color</Text>
+=======
+            <Text style={styles.greeting}>Blue Color </Text>
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
             <Text style={styles.title}>Find Trusted Services</Text>
           </View>
 
@@ -304,7 +420,11 @@ export default function HomeScreen() {
               <Ionicons
                 name={isGuest ? "log-out-outline" : "log-out-outline"}
                 size={22}
+<<<<<<< HEAD
                 color="#E74C3C"
+=======
+                color={isGuest ? "#E74C3C" : "#E74C3C"}
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
               />
               <Text style={[styles.menuItemText, styles.logoutText]}>
                 {isGuest ? "Exit Guest Mode" : "Logout"}
@@ -636,6 +756,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     letterSpacing: -0.5,
   },
+<<<<<<< HEAD
+=======
+  // 3x3 Grid Styles
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   categoriesGrid3x3: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -643,8 +767,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   categoryCard3x3: {
+<<<<<<< HEAD
     width: (width - 64) / 3,
     aspectRatio: 1,
+=======
+    width: (width - 64) / 3, // 20px padding each side + 12px gap
+    aspectRatio: 1, // Square cards
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
     backgroundColor: CARD_WHITE,
     borderRadius: 20,
     padding: 12,
@@ -870,4 +999,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
+<<<<<<< HEAD
 }); 
+=======
+});
+>>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
