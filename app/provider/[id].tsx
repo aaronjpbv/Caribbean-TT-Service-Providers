@@ -7,18 +7,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-<<<<<<< HEAD
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-=======
     ActivityIndicator,
     Alert,
     Dimensions,
@@ -29,7 +17,6 @@ import {
     Text,
     TouchableOpacity,
     View
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -46,21 +33,13 @@ const TEXT_MUTED    = "#6B7280";
 const BORDER_COLOR  = "#E5E7EB";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
-=======
-// Update these fields to match your friend's exact Supabase column names
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
 interface Worker {
   id: string;
   name: string;
   trade: string;
   location: string;
   bio: string;
-<<<<<<< HEAD
   // hourly_rate: number;  // ❌ REMOVED - jobs are project-based
-=======
-  hourly_rate: number;
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   response_time: string;
   jobs_completed: number;
   rating: number;
@@ -68,10 +47,7 @@ interface Worker {
   is_verified: boolean;
   avatar_url: string | null;
   skills: string[];           // e.g. ["Rewiring", "Panel Upgrades"]
-<<<<<<< HEAD
   starting_price?: number;    // ✅ ADDED - optional minimum project price
-=======
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
 }
 
 interface PortfolioItem {
@@ -93,23 +69,14 @@ interface Availability {
   [day: string]: boolean;     // e.g. { Mon: true, Tue: false }
 }
 
-<<<<<<< HEAD
 // ── Mock data (updated without hourly_rate) ──────────────────────────────────
-=======
-// ── Mock data (used until Supabase tables are confirmed) ──────────────────────
-// 🔁 DELETE this block and uncomment the Supabase fetch in useEffect below
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
 const MOCK_WORKER: Worker = {
   id: "mock_001",
   name: "Marcus Holt",
   trade: "Electrician",
   location: "North",
   bio: "Specialising in residential rewiring, panel upgrades, and smart home installations. I take pride in clean, code-compliant work and always leave the job site tidier than I found it.",
-<<<<<<< HEAD
   // hourly_rate: 85,  // ❌ REMOVED
-=======
-  hourly_rate: 85,
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   response_time: "~30 min",
   jobs_completed: 340,
   rating: 4.8,
@@ -117,10 +84,7 @@ const MOCK_WORKER: Worker = {
   is_verified: true,
   avatar_url: null,
   skills: ["Rewiring", "Panel Upgrades", "Smart Home", "EV Chargers", "Lighting"],
-<<<<<<< HEAD
   starting_price: 150,  // ✅ ADDED - minimum project price
-=======
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
 };
 
 const MOCK_PORTFOLIO: PortfolioItem[] = [
@@ -310,11 +274,7 @@ export default function ProviderProfileScreen() {
             </View>
           </View>
 
-<<<<<<< HEAD
           {/* Stats strip - HOURLY RATE REMOVED */}
-=======
-          {/* Stats strip */}
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
           <View style={styles.statsStrip}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{worker.jobs_completed}+</Text>
@@ -325,7 +285,6 @@ export default function ProviderProfileScreen() {
               <Text style={styles.statValue}>{worker.response_time}</Text>
               <Text style={styles.statLabel}>Response</Text>
             </View>
-<<<<<<< HEAD
             {/* HOURLY RATE STAT REMOVED - No longer showing $/hr */}
             {worker.starting_price && (
               <>
@@ -336,13 +295,6 @@ export default function ProviderProfileScreen() {
                 </View>
               </>
             )}
-=======
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>${worker.hourly_rate}</Text>
-              <Text style={styles.statLabel}>Per Hour</Text>
-            </View>
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
           </View>
         </View>
 
@@ -473,7 +425,6 @@ export default function ProviderProfileScreen() {
         </View>
       </ScrollView>
 
-<<<<<<< HEAD
       {/* ── Sticky booking bar (UPDATED without hourly rate) ── */}
       <View style={styles.bookingBar}>
         <View>
@@ -494,34 +445,19 @@ export default function ProviderProfileScreen() {
               <Text style={styles.bookingAvail}>Responds in {worker.response_time}</Text>
             </>
           )}
-=======
-      {/* ── Sticky booking bar ── */}
-      <View style={styles.bookingBar}>
-        <View>
-          <Text style={styles.bookingRate}>
-            ${worker.hourly_rate}
-            <Text style={styles.bookingRateSub}> / hr</Text>
-          </Text>
-          <Text style={styles.bookingAvail}>Responds in {worker.response_time}</Text>
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
         </View>
         <TouchableOpacity
           style={styles.bookBtn}
           activeOpacity={0.85}
           onPress={() => {
-<<<<<<< HEAD
             // 🔁 Navigate to quote request screen
-            router.push(`/request-quote/${worker.id}`);
+            router.push({
+              pathname: "/request-quote/[id]",
+              params: { id: worker.id }
+            });
           }}
         >    
           <Text style={styles.bookBtnText}>Request a Quote</Text>
-=======
-            // 🔁 router.push(`/booking/${worker.id}`) when booking screen is ready
-            Alert.alert("Coming Soon", "Booking will be available shortly!");
-          }}
-        >
-          <Text style={styles.bookBtnText}>Book Now</Text>
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
           <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
       </View>
@@ -530,11 +466,7 @@ export default function ProviderProfileScreen() {
   );
 }
 
-<<<<<<< HEAD
 // ── Styles (updated for project-based pricing) ────────────────────────────────
-=======
-// ── Styles ────────────────────────────────────────────────────────────────────
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
 const styles = StyleSheet.create({
   container:  { flex: 1, backgroundColor: BG_GRAY },
   centered:   { justifyContent: "center", alignItems: "center" },
@@ -673,11 +605,7 @@ const styles = StyleSheet.create({
   reviewDate:        { fontSize: 12, color: TEXT_MUTED },
   reviewComment:     { fontSize: 14, color: TEXT_DARK, lineHeight: 21 },
 
-<<<<<<< HEAD
   // Booking bar (UPDATED for project-based pricing)
-=======
-  // Booking bar
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   bookingBar: {
     position: "absolute", bottom: 0, left: 0, right: 0,
     backgroundColor: CARD_WHITE,
@@ -687,13 +615,8 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.06, shadowRadius: 8, elevation: 10,
   },
-<<<<<<< HEAD
   bookingRate:    { fontSize: 20, fontWeight: "800", color: TEXT_DARK },  // Slightly smaller
   bookingRateSub: { fontSize: 13, fontWeight: "400", color: TEXT_MUTED },
-=======
-  bookingRate:    { fontSize: 22, fontWeight: "800", color: TEXT_DARK },
-  bookingRateSub: { fontSize: 14, fontWeight: "400", color: TEXT_MUTED },
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
   bookingAvail:   { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
   bookBtn: {
     backgroundColor: PRIMARY_TEAL, borderRadius: 12,
@@ -701,8 +624,4 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center",
   },
   bookBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
-<<<<<<< HEAD
-}); 
-=======
-});
->>>>>>> 0be7f1d3e1e684fceaa17a929c348ef7b5495a78
+});  
