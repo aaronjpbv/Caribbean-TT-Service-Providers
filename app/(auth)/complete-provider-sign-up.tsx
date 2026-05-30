@@ -2,20 +2,20 @@ import { supabase } from "@/utils/supabase";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function CompleteProviderSignUp() {
     const router = useRouter();
-    const [companyName, setCompanyName] = useState("");
-    const [category, setCategory] = useState("");
+    const [company_name, setCompanyName] = useState("");
+    const [category, setCategory] = useState(""); 
     const [region, setRegion] = useState("");
     const [isLoading, setIsLoading] = useState(false); 
     const [error, setError] = useState<string | null>(null); 
@@ -26,7 +26,7 @@ export default function CompleteProviderSignUp() {
 
         try {
             // Validation
-            if (!companyName || !category || !region) {
+            if (!company_name || !category || !region) {
                 throw new Error("Please fill in all fields");
             }
 
@@ -42,7 +42,7 @@ export default function CompleteProviderSignUp() {
                 .insert([
                     {
                         user_id: user.id,
-                        company_name: companyName,
+                        company_name: company_name,
                         category: category,
                         region: region,
                     }
@@ -69,7 +69,7 @@ export default function CompleteProviderSignUp() {
                 <TextInput
                     style={styles.input}
                     placeholder="Company Name"
-                    value={companyName}
+                    value={company_name}
                     onChangeText={setCompanyName}
                 />
                 
@@ -97,7 +97,7 @@ export default function CompleteProviderSignUp() {
                     {isLoading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.submitButtonText}>Complete Sign Up</Text>
+                        <Text style={styles.submitButtonText}>Sign Up</Text> 
                     )}
                 </TouchableOpacity>
             </View>
