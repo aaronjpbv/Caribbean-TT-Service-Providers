@@ -19,9 +19,10 @@ import { supabase } from "@/utils/supabase";
 // It exports a pre-configured Supabase client so we can talk to the database
 // without setting up the connection from scratch every time.
 
-import { Ionicons } from "@expo/vector-icons";
-// A library of ~1,300 icons. You reference them by name, e.g. "search" or
-// "location-outline". Expo bundles this so no extra install is needed.
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+// importing two popular icon sets. Ionicons comes default with EXPO; 
+// MaterialCommunityIcons is a separate package we installed for more icon options.
+
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // A simple key-value storage that persists on the device — like localStorage
@@ -53,25 +54,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-// These are React Native's built-in UI components and utilities:
-//   View          — a box / container (like <div> on the web)
-//   Text          — renders text (ALL text must be inside <Text>)
-//   TextInput     — a text field the user can type into
-//   ScrollView    — a container that scrolls when content overflows
-//   FlatList      — an optimised scrollable list (lazy-renders items)
-//   TouchableOpacity — a pressable element that dims when tapped
-//   Pressable     — a lower-level pressable with more control
-//   Modal         — an overlay that floats above the rest of the screen
-//   Image         — renders images (not used here but common)
-//   Alert         — shows a native dialog box
-//   Animated      — lets you animate values smoothly
-//   Dimensions    — gives you the device's screen width/height
-//   StatusBar     — controls the thin bar at the very top (time, battery)
-//   StyleSheet    — creates an optimised style object (like CSS-in-JS)
 
-// ── 2. CONSTANTS ─────────────────────────────────────────────────────────────
-// Storing colours and dimensions as named constants means you only need to
-// change them in ONE place if the design ever updates.
+
 
 const { width } = Dimensions.get("window");
 // Destructure just "width" from the screen dimensions. Used to calculate
@@ -86,29 +70,29 @@ const TEXT_DARK     = "#1F2937";
 const TEXT_MUTED    = "#6B7280";
 
 // ── 3. STATIC DATA ───────────────────────────────────────────────────────────
-// These arrays never change at runtime, so we define them outside the
-// component. Defining them inside would recreate them on every render —
-// wasteful and potentially buggy if used as dependency values in hooks.
+// When it goes live Category and Region data will come from the database. 
+const categories: Category[] = [
+  { id: "all",         name: "All",            icon: "apps-outline",             type: "ionicons" },
+  { id: "plumbing",    name: "Plumbing",       icon: "pipe",                     type: "material" }, 
+  { id: "electrical",  name: "Electrical",     icon: "flash-outline",            type: "ionicons" },
+  { id: "landscaping", name: "Lawn Care",      icon: "leaf-outline",             type: "ionicons" },
+  { id: "cleaning",    name: "Cleaning",       icon: "sparkles-outline",         type: "ionicons" },
+  { id: "painting",    name: "Painting",       icon: "color-palette-outline",    type: "ionicons" },
+  { id: "hvac",        name: "AC Services",    icon: "air-conditioner",          type: "material" },  
+  { id: "carpentry",   name: "Carpentry",      icon: "hammer-outline",           type: "ionicons" },
+  { id: "security",    name: "Security",       icon: "shield-checkmark-outline", type: "ionicons" },
+  { id: "legal",       name: "Legal",          icon: "gavel",                    type: "material" }, // 👈 Updated to Gavel
+  { id: "admin",       name: "Admin Services", icon: "document-text-outline",    type: "ionicons" },
+]; 
 
-const categories = [
-  { id: "all",        name: "All",       icon: "apps-outline"            },
-  { id: "plumbing",   name: "Plumbing",  icon: "water-outline"           },
-  { id: "electrical", name: "Electrical",icon: "flash-outline"           },
-  { id: "landscaping",name: "Lawn Care", icon: "leaf-outline"            },
-  { id: "cleaning",   name: "Cleaning",  icon: "sparkles-outline"        },
-  { id: "painting",   name: "Painting",  icon: "color-palette-outline"   },
-  { id: "hvac",       name: "HVAC",      icon: "thermometer-outline"     },
-  { id: "carpentry",  name: "Carpentry", icon: "hammer-outline"          },
-  { id: "security",   name: "Security",  icon: "shield-checkmark-outline"},
-];
+
+
+
+
 
 const regions = ["All", "North", "Central", "South", "East", "West", "Tobago"];
 
-// ── 4. TYPESCRIPT TYPE ───────────────────────────────────────────────────────
-// TypeScript lets us describe the *shape* of our data with a "type" or
-// "interface". This is not JavaScript — it's compile-time only. If you try
-// to use a field that doesn't exist on Provider, TypeScript will warn you
-// before you even run the app.
+// - Type definations //
 
 type Provider = {
   id:       string;
@@ -133,11 +117,8 @@ export default function HomeScreen() {
   // useState is the most fundamental Hook. It lets a component "remember"
   // a value between renders.
   //
-  // Syntax:  const [value, setValue] = useState(initialValue)
-  //   • "value"    — the current state (read-only; never mutate directly)
-  //   • "setValue" — a function that updates the state AND triggers a re-render
-  //   • useState() — call with the starting value
-  //
+ 
+  
   // Every time setValue is called React re-runs this function from the top
   // and redraws only the parts of the UI that changed. This is the core idea
   // behind React: UI = f(state).
@@ -154,9 +135,7 @@ export default function HomeScreen() {
   // Tracks which category pill is active. Starts on "All".
 
   const [selectedRegion, setSelectedRegion] = useState("All");
-  // ⚠️ THIS WAS MISSING — it caused your second crash. The variable was used
-  // all over the JSX but never declared, so the app would throw a
-  // ReferenceError as soon as the syntax error was fixed.
+
 
   const [menuVisible, setMenuVisible]       = useState(false);
   // Controls whether the dropdown profile menu is shown.
@@ -497,20 +476,16 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* ── CATEGORY GRID ── */}
+        {/* ── CATEGORY GRID ── */}
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse Categories</Text>
           <View style={styles.categoriesGrid3x3}>
             {categories.map((category) => (
-              // .map() transforms an array into an array of JSX elements.
-              // Each element needs a unique "key" prop so React can track
-              // which items changed, were added, or removed efficiently.
               <TouchableOpacity
                 key={category.id}
                 style={[
                   styles.categoryCard3x3,
                   selectedCategory === category.name && styles.categoryCard3x3Active,
-                  // Conditional style: add the active style only when this
-                  // card's name matches selectedCategory.
                 ]}
                 onPress={() => handleCategoryPress(category.name)}
                 activeOpacity={0.8}
@@ -521,29 +496,35 @@ export default function HomeScreen() {
                     selectedCategory === category.name && styles.categoryIcon3x3Active,
                   ]}
                 >
-                  <Ionicons
-                    name={category.icon as any}
-                    // "as any" silences a TypeScript error — Ionicons expects
-                    // a specific union type for icon names; casting to any
-                    // is acceptable here since we know the names are valid.
-                    size={28}
-                    color={selectedCategory === category.name ? "#fff" : PRIMARY_TEAL}
-                  />
+                  {/* Dynamically switch icon families based on data type */}
+                  {category.type === "material" ? (
+                    <MaterialCommunityIcons
+                      name={category.icon as any}
+                      size={28}
+                      color={selectedCategory === category.name ? "#fff" : PRIMARY_TEAL}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={category.icon as any}
+                      size={28}
+                      color={selectedCategory === category.name ? "#fff" : PRIMARY_TEAL}
+                    />
+                  )}
                 </View>
+                
                 <Text
                   style={[
                     styles.categoryName3x3,
                     selectedCategory === category.name && styles.categoryName3x3Active,
                   ]}
                   numberOfLines={1}
-                  // Truncate text to 1 line with "…" if it overflows.
                 >
                   {category.name}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </View>  
 
         {/* ── REGION FILTER ── */}
         <View style={styles.filterSection}>
@@ -586,18 +567,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* FlatList vs ScrollView:
-              ScrollView renders ALL children at once — fine for small lists.
-              FlatList only renders items currently visible on screen
-              (plus a small buffer), making it far more efficient for long lists.
-              scrollEnabled={false} here because FlatList is already inside
-              a ScrollView; we let the outer ScrollView handle scrolling. */}
+      
           <FlatList
             data={filteredProviders}
             scrollEnabled={false}
             keyExtractor={(item) => item.id}
-            // keyExtractor tells FlatList which field to use as the unique key.
-            // It's the FlatList equivalent of the key={} prop in .map().
+          
             renderItem={({ item }) => (
               // renderItem receives an object; we destructure "item" from it.
               // <Link> from expo-router wraps a Touchable with a navigation

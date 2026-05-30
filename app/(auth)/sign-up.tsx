@@ -95,20 +95,25 @@ export default function SignUpScreen() {
       if (authError) throw authError;
       if (!authData?.user) throw new Error("No user created");
 
-      const { error: insertError } = await supabase.from("users").insert({
-        id: authData.user.id,
-        email,
-        full_name: fullName,
-        phone_number: phoneNumber || null,
-        role: selectedRole,
-        profile_completed: selectedRole === "client",
-      });
-      if (insertError) throw insertError;
+      const { error: insertError } = await supabase
+  .from("users")
+  .insert({
+    id: authData.user.id,
+    email: email.trim().toLowerCase(),
+    full_name: fullName.trim(),
+    phone: phoneNumber?.trim() || null,
+    role: selectedRole,
+  });  
 
-      router.replace(selectedRole === "provider" ? "/(auth)/complete-provider-profile" : "/(tabs)/index");
+  //  TEMP Debug line 
+console.log("Insert error:", JSON.stringify(insertError, null, 2));
+
+if (insertError) throw insertError;
+
+      router.replace(selectedRole === "provider" ? "/(auth)/complete_provider_sign-up.tsx" : "/(tabs)/index");
     } catch (err: any) {
       showError(err.message || "Failed to create account.");
-    } finally {
+    } finally {  
       setLoading(false);
     }
   }, [email, password, fullName, phoneNumber, selectedRole, router]);

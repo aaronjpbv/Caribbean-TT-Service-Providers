@@ -1,29 +1,29 @@
 // app/provider/[id].tsx
 // Worker/Provider Profile Screen
-// To navigate here from home screen:
-//   router.push(`/provider/${workerId}`)
+// Navigate here: router.push(`/provider/${workerId}`)
 
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
 
-// ── Design tokens (matched to your app) ──────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 const PRIMARY_TEAL  = "#0F6C7B";
 const TEAL_LIGHT    = "#E6F4F6";
+const TEAL_MID      = "#D0ECF0";
 const AMBER         = "#F5A623";
 const AMBER_BG      = "#FFF3DC";
 const BG_GRAY       = "#F8FAFC";
@@ -31,6 +31,10 @@ const CARD_WHITE    = "#FFFFFF";
 const TEXT_DARK     = "#1F2937";
 const TEXT_MUTED    = "#6B7280";
 const BORDER_COLOR  = "#E5E7EB";
+const SUCCESS_GREEN = "#34D399";
+const SUCCESS_BG    = "#D1FAE5";
+const DANGER_RED    = "#FCA5A5";
+const DANGER_BG     = "#FEE2E2";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Worker {
@@ -39,15 +43,13 @@ interface Worker {
   trade: string;
   location: string;
   bio: string;
-  // hourly_rate: number;  // ❌ REMOVED - jobs are project-based
   response_time: string;
   jobs_completed: number;
   rating: number;
   review_count: number;
   is_verified: boolean;
   avatar_url: string | null;
-  skills: string[];           // e.g. ["Rewiring", "Panel Upgrades"]
-  starting_price?: number;    // ✅ ADDED - optional minimum project price
+  skills: string[];
 }
 
 interface PortfolioItem {
@@ -66,17 +68,16 @@ interface Review {
 }
 
 interface Availability {
-  [day: string]: boolean;     // e.g. { Mon: true, Tue: false }
+  [day: string]: boolean;
 }
 
-// ── Mock data (updated without hourly_rate) ──────────────────────────────────
+// ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_WORKER: Worker = {
   id: "mock_001",
   name: "Marcus Holt",
   trade: "Electrician",
   location: "North",
   bio: "Specialising in residential rewiring, panel upgrades, and smart home installations. I take pride in clean, code-compliant work and always leave the job site tidier than I found it.",
-  // hourly_rate: 85,  // ❌ REMOVED
   response_time: "~30 min",
   jobs_completed: 340,
   rating: 4.8,
@@ -84,7 +85,6 @@ const MOCK_WORKER: Worker = {
   is_verified: true,
   avatar_url: null,
   skills: ["Rewiring", "Panel Upgrades", "Smart Home", "EV Chargers", "Lighting"],
-  starting_price: 150,  // ✅ ADDED - minimum project price
 };
 
 const MOCK_PORTFOLIO: PortfolioItem[] = [
@@ -103,13 +103,21 @@ const MOCK_AVAILABILITY: Availability = {
   Mon: true, Tue: false, Wed: true, Thu: true, Fri: false, Sat: true, Sun: false,
 };
 
-// ── Small components ──────────────────────────────────────────────────────────
+// ── Helper utilities ──────────────────────────────────────────────────────────
+function getInitials(name: string) {
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+}
 
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-TT", { month: "short", year: "numeric" });
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 function StarRating({ rating, size = 13 }: { rating: number; size?: number }) {
   return (
-    <View style={{ flexDirection: "row", gap: 1 }}>
+    <View style={{ flexDirection: "row", gap: 2 }}>
       {[1, 2, 3, 4, 5].map((s) => (
-        <Text key={s} style={{ fontSize: size, color: s <= Math.round(rating) ? AMBER : "#DDDDDD" }}>
+        <Text key={s} style={{ fontSize: size, color: s <= Math.round(rating) ? AMBER : "#E0E0E0" }}>
           ★
         </Text>
       ))}
@@ -127,74 +135,61 @@ function RatingBadge({ rating }: { rating: number }) {
 }
 
 function SectionTitle({ title }: { title: string }) {
-  return <Text style={styles.sectionTitle}>{title}</Text>;
+  return (
+    <View style={styles.sectionTitleRow}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionTitleLine} />
+    </View>
+  );
 }
 
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-TT", { month: "short", year: "numeric" });
+function StatItem({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.statItem}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
 }
 
 // ── Main screen ───────────────────────────────────────────────────────────────
-
 export default function ProviderProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const [worker, setWorker]               = useState<Worker | null>(null);
-  const [portfolio, setPortfolio]         = useState<PortfolioItem[]>([]);
-  const [reviews, setReviews]             = useState<Review[]>([]);
-  const [availability, setAvailability]   = useState<Availability>({});
-  const [loading, setLoading]             = useState(true);
-  const [activeTab, setActiveTab]         = useState<"about" | "portfolio" | "reviews">("about");
+  const [worker, setWorker]             = useState<Worker | null>(null);
+  const [portfolio, setPortfolio]       = useState<PortfolioItem[]>([]);
+  const [reviews, setReviews]           = useState<Review[]>([]);
+  const [availability, setAvailability] = useState<Availability>({});
+  const [loading, setLoading]           = useState(true);
+  const [activeTab, setActiveTab]       = useState<"about" | "portfolio" | "reviews">("about");
 
-  useEffect(() => {
-    fetchProviderData();
-  }, [id]);
+  useEffect(() => { fetchProviderData(); }, [id]);
 
   const fetchProviderData = async () => {
     setLoading(true);
     try {
-      // ── OPTION A: Mock data (use this until Supabase tables are ready) ──────
+      // ── Mock data (replace with Supabase fetch when ready) ────────────────
       setWorker(MOCK_WORKER);
       setPortfolio(MOCK_PORTFOLIO);
       setReviews(MOCK_REVIEWS);
       setAvailability(MOCK_AVAILABILITY);
 
-      // ── OPTION B: Real Supabase fetch (uncomment when ready) ─────────────
-      // Ask your friend for the exact table names and column names first!
-      //
-      // const { data: workerData, error: workerError } = await supabase
-      //   .from("service_providers")       // 🔁 confirm table name with friend
-      //   .select("*")
-      //   .eq("id", id)
-      //   .single();
-      // if (workerError) throw workerError;
+      // ── Supabase (uncomment when tables confirmed) ────────────────────────
+      // const { data: workerData, error } = await supabase
+      //   .from("service_providers").select("*").eq("id", id).single();
+      // if (error) throw error;
       // setWorker(workerData);
-      //
       // const { data: portfolioData } = await supabase
-      //   .from("portfolio")               // 🔁 confirm table name with friend
-      //   .select("*")
-      //   .eq("provider_id", id);
+      //   .from("portfolio").select("*").eq("provider_id", id);
       // setPortfolio(portfolioData ?? []);
-      //
       // const { data: reviewData } = await supabase
-      //   .from("reviews")                 // 🔁 confirm table name with friend
-      //   .select("*")
-      //   .eq("provider_id", id)
+      //   .from("reviews").select("*").eq("provider_id", id)
       //   .order("created_at", { ascending: false });
       // setReviews(reviewData ?? []);
-      //
       // const { data: availData } = await supabase
-      //   .from("availability")            // 🔁 confirm table name with friend
-      //   .select("*")
-      //   .eq("provider_id", id)
-      //   .single();
+      //   .from("availability").select("*").eq("provider_id", id).single();
       // setAvailability(availData ?? {});
-
     } catch (error) {
       console.error("Error fetching provider:", error);
       Alert.alert("Error", "Could not load provider profile.");
@@ -203,12 +198,12 @@ export default function ProviderProfileScreen() {
     }
   };
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={PRIMARY_TEAL} />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+        <Text style={styles.loadingText}>Loading profile…</Text>
       </View>
     );
   }
@@ -227,22 +222,28 @@ export default function ProviderProfileScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={PRIMARY_TEAL} />
 
-      {/* ── Teal header ── */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Provider Profile</Text>
-        <View style={{ width: 40 }} />
+        {/* Share / save placeholder — keeps header balanced */}
+        <TouchableOpacity style={styles.backButton}>
+          <Ionicons name="heart-outline" size={22} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
-
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* ── Hero card ── */}
         <View style={styles.heroCard}>
-          <View style={styles.heroRow}>
 
-            {/* Avatar — initials style matching your home screen cards */}
+          {/* Avatar + core info */}
+          <View style={styles.heroRow}>
             <View style={styles.avatarWrap}>
               <View style={styles.avatarBox}>
                 {worker.avatar_url
@@ -252,49 +253,39 @@ export default function ProviderProfileScreen() {
               </View>
               {worker.is_verified && (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark" size={11} color="#fff" />
+                  <Ionicons name="checkmark" size={10} color="#fff" />
                 </View>
               )}
             </View>
 
-            {/* Info */}
             <View style={styles.heroInfo}>
               <View style={styles.nameRow}>
-                <Text style={styles.workerName}>{worker.name}</Text>
+                <Text style={styles.workerName} numberOfLines={1}>{worker.name}</Text>
                 <RatingBadge rating={worker.rating} />
               </View>
+
               <View style={styles.metaRow}>
-                <Ionicons name="business-outline" size={13} color={TEXT_MUTED} />
+                <Ionicons name="construct-outline" size={13} color={TEXT_MUTED} />
                 <Text style={styles.metaText}> {worker.trade}</Text>
-                <Text style={styles.metaDot}> • </Text>
+                <Text style={styles.metaDot}>  ·  </Text>
                 <Ionicons name="location-outline" size={13} color={TEXT_MUTED} />
                 <Text style={styles.metaText}> {worker.location}</Text>
               </View>
-              <Text style={styles.reviewCountText}>{worker.review_count} reviews</Text>
+
+              <Text style={styles.reviewCountText}>{worker.review_count} verified reviews</Text>
             </View>
           </View>
 
-          {/* Stats strip - HOURLY RATE REMOVED */}
+          {/* Divider */}
+          <View style={styles.heroDivider} />
+
+          {/* Stats strip */}
           <View style={styles.statsStrip}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{worker.jobs_completed}+</Text>
-              <Text style={styles.statLabel}>Jobs Done</Text>
-            </View>
+            <StatItem value={`${worker.jobs_completed}+`} label="Jobs Done" />
             <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{worker.response_time}</Text>
-              <Text style={styles.statLabel}>Response</Text>
-            </View>
-            {/* HOURLY RATE STAT REMOVED - No longer showing $/hr */}
-            {worker.starting_price && (
-              <>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>${worker.starting_price}</Text>
-                  <Text style={styles.statLabel}>Starting From</Text>
-                </View>
-              </>
-            )}
+            <StatItem value={worker.response_time} label="Avg Response" />
+            <View style={styles.statDivider} />
+            <StatItem value={`${worker.rating} ★`} label="Rating" />
           </View>
         </View>
 
@@ -305,6 +296,7 @@ export default function ProviderProfileScreen() {
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
               onPress={() => setActiveTab(tab)}
+              activeOpacity={0.75}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -313,9 +305,10 @@ export default function ProviderProfileScreen() {
           ))}
         </View>
 
+        {/* ── Tab content ── */}
         <View style={styles.body}>
 
-          {/* ══ ABOUT TAB ══ */}
+          {/* ══ ABOUT ══ */}
           {activeTab === "about" && (
             <>
               <SectionTitle title="About" />
@@ -343,7 +336,10 @@ export default function ProviderProfileScreen() {
                     <View style={styles.availRow}>
                       {Object.entries(availability).map(([day, avail]) => (
                         <View key={day} style={styles.dayCol}>
-                          <View style={[styles.dayDot, avail ? styles.dotGreen : styles.dotRed]} />
+                          <View style={[
+                            styles.dayDot,
+                            avail ? styles.dotGreen : styles.dotRed,
+                          ]} />
                           <Text style={styles.dayText}>{day.slice(0, 2)}</Text>
                         </View>
                       ))}
@@ -364,13 +360,17 @@ export default function ProviderProfileScreen() {
             </>
           )}
 
-          {/* ══ PORTFOLIO TAB ══ */}
+          {/* ══ PORTFOLIO ══ */}
           {activeTab === "portfolio" && (
             <>
               <SectionTitle title="Past Work" />
-              {portfolio.length === 0
-                ? <View style={styles.card}><Text style={styles.emptyText}>No portfolio items yet.</Text></View>
-                : portfolio.map((item) => (
+              {portfolio.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Ionicons name="images-outline" size={32} color={TEXT_MUTED} />
+                  <Text style={styles.emptyText}>No portfolio items yet.</Text>
+                </View>
+              ) : (
+                portfolio.map((item) => (
                   <View key={item.id} style={styles.portfolioCard}>
                     <Image source={{ uri: item.image_url }} style={styles.portfolioImage} />
                     <View style={styles.portfolioFooter}>
@@ -382,26 +382,31 @@ export default function ProviderProfileScreen() {
                     </View>
                   </View>
                 ))
-              }
+              )}
             </>
           )}
 
-          {/* ══ REVIEWS TAB ══ */}
+          {/* ══ REVIEWS ══ */}
           {activeTab === "reviews" && (
             <>
-              {/* Summary */}
+              {/* Summary card */}
               <View style={[styles.card, styles.reviewSummaryCard]}>
                 <Text style={styles.bigRating}>{worker.rating}</Text>
-                <StarRating rating={worker.rating} size={24} />
+                <StarRating rating={worker.rating} size={22} />
                 <Text style={styles.reviewSummaryText}>
                   Based on {worker.review_count} reviews
                 </Text>
               </View>
 
               <SectionTitle title="Recent Reviews" />
-              {reviews.length === 0
-                ? <View style={styles.card}><Text style={styles.emptyText}>No reviews yet.</Text></View>
-                : reviews.map((r) => (
+
+              {reviews.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Ionicons name="chatbubble-outline" size={32} color={TEXT_MUTED} />
+                  <Text style={styles.emptyText}>No reviews yet.</Text>
+                </View>
+              ) : (
+                reviews.map((r) => (
                   <View key={r.id} style={styles.card}>
                     <View style={styles.reviewHeader}>
                       <View style={styles.reviewAvatar}>
@@ -418,47 +423,32 @@ export default function ProviderProfileScreen() {
                     <Text style={styles.reviewComment}>{r.comment}</Text>
                   </View>
                 ))
-              }
+              )}
             </>
           )}
 
         </View>
       </ScrollView>
 
-      {/* ── Sticky booking bar (UPDATED without hourly rate) ── */}
+      {/* ── Sticky booking bar ── */}
       <View style={styles.bookingBar}>
-        <View>
-          {worker.starting_price ? (
-            <>
-              <Text style={styles.bookingRate}>
-                ${worker.starting_price}
-                <Text style={styles.bookingRateSub}> starting</Text>
-              </Text>
-              <Text style={styles.bookingAvail}>Free estimates • Get quote</Text>
-            </>
-          ) : (
-            <>
-              <Text style={styles.bookingRate}>
-                Get Quote
-                <Text style={styles.bookingRateSub}> • Project-based</Text>
-              </Text>
-              <Text style={styles.bookingAvail}>Responds in {worker.response_time}</Text>
-            </>
-          )}
+        <View style={styles.bookingBarLeft}>
+          <View style={styles.freeQuoteBadge}>
+            <Ionicons name="sparkles" size={12} color={PRIMARY_TEAL} />
+            <Text style={styles.freeQuoteLabel}>Free Quote</Text>
+          </View>
+          <Text style={styles.bookingAvail}>Get a free quote today</Text>
         </View>
+
         <TouchableOpacity
           style={styles.bookBtn}
           activeOpacity={0.85}
-          onPress={() => {
-            // 🔁 Navigate to quote request screen
-            router.push({
-              pathname: "/request-quote/[id]",
-              params: { id: worker.id }
-            });
-          }}
-        >    
+          onPress={() =>
+            router.push({ pathname: "/request-quote/[id]", params: { id: worker.id } })
+          }
+        >
           <Text style={styles.bookBtnText}>Request a Quote</Text>
-          <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 6 }} />
+          <Ionicons name="arrow-forward" size={15} color="#fff" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
       </View>
 
@@ -466,162 +456,230 @@ export default function ProviderProfileScreen() {
   );
 }
 
-// ── Styles (updated for project-based pricing) ────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container:  { flex: 1, backgroundColor: BG_GRAY },
-  centered:   { justifyContent: "center", alignItems: "center" },
-  scroll:     { flex: 1 },
-  loadingText:{ marginTop: 12, color: TEXT_MUTED, fontSize: 15 },
+  container:    { flex: 1, backgroundColor: BG_GRAY },
+  centered:     { justifyContent: "center", alignItems: "center" },
+  scroll:       { flex: 1 },
+  scrollContent:{ paddingBottom: 140 },
+  loadingText:  { marginTop: 12, color: TEXT_MUTED, fontSize: 15 },
 
-  // Header — matches profile.tsx exactly
+  // ── Header ──────────────────────────────────────────────────────────────
   header: {
     backgroundColor: PRIMARY_TEAL,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: 52,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   backButton: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 38, height: 38, borderRadius: 11,
     backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center", alignItems: "center",
   },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "700", letterSpacing: 0.2 },
 
-  // Hero card
+  // ── Hero card ────────────────────────────────────────────────────────────
   heroCard: {
     backgroundColor: CARD_WHITE,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  heroRow:    { flexDirection: "row", gap: 14, marginBottom: 16 },
+  heroRow:    { flexDirection: "row", gap: 14, alignItems: "flex-start" },
   avatarWrap: { position: "relative" },
   avatarBox: {
-    width: 72, height: 72, borderRadius: 14,
+    width: 68, height: 68, borderRadius: 16,
     backgroundColor: TEAL_LIGHT,
     alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: TEAL_MID,
   },
-  avatarImage:    { width: 72, height: 72, borderRadius: 14 },
+  avatarImage:    { width: 68, height: 68, borderRadius: 14 },
   avatarInitials: { fontSize: 22, fontWeight: "700", color: PRIMARY_TEAL },
   verifiedBadge: {
     position: "absolute", bottom: -4, right: -4,
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: PRIMARY_TEAL,
     alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: CARD_WHITE,
+    borderWidth: 2.5, borderColor: CARD_WHITE,
   },
 
-  heroInfo:       { flex: 1, justifyContent: "center", gap: 5 },
-  nameRow:        { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  workerName:     { fontSize: 18, fontWeight: "700", color: TEXT_DARK, flex: 1 },
+  heroInfo:       { flex: 1, gap: 5, paddingTop: 2 },
+  nameRow:        { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  workerName:     { fontSize: 17, fontWeight: "700", color: TEXT_DARK, flex: 1 },
   ratingBadge:    { flexDirection: "row", alignItems: "center", backgroundColor: AMBER_BG, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, gap: 3 },
-  ratingBadgeStar:  { fontSize: 13, color: AMBER },
-  ratingBadgeValue: { fontSize: 13, fontWeight: "700", color: AMBER },
+  ratingBadgeStar:  { fontSize: 12, color: AMBER },
+  ratingBadgeValue: { fontSize: 12, fontWeight: "700", color: AMBER },
   metaRow:        { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   metaText:       { fontSize: 13, color: TEXT_MUTED },
-  metaDot:        { fontSize: 13, color: TEXT_MUTED },
+  metaDot:        { fontSize: 13, color: BORDER_COLOR },
   reviewCountText:{ fontSize: 12, color: TEXT_MUTED },
 
-  statsStrip: {
-    flexDirection: "row", backgroundColor: BG_GRAY,
-    borderRadius: 12, paddingVertical: 12, alignItems: "center",
-  },
-  statItem:    { flex: 1, alignItems: "center" },
-  statValue:   { fontSize: 16, fontWeight: "700", color: TEXT_DARK },
-  statLabel:   { fontSize: 11, color: TEXT_MUTED, marginTop: 2 },
-  statDivider: { width: 1, height: 28, backgroundColor: BORDER_COLOR },
+  heroDivider: { height: 1, backgroundColor: BG_GRAY, marginVertical: 16 },
 
-  // Tab bar
-  tabBar: {
-    flexDirection: "row", backgroundColor: CARD_WHITE,
-    marginHorizontal: 16, marginTop: 12,
-    borderRadius: 12, padding: 4,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+  statsStrip: {
+    flexDirection: "row",
+    backgroundColor: BG_GRAY,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
   },
-  tab:           { flex: 1, paddingVertical: 9, alignItems: "center", borderRadius: 9 },
+  statItem:    { flex: 1, alignItems: "center", gap: 3 },
+  statValue:   { fontSize: 15, fontWeight: "700", color: TEXT_DARK },
+  statLabel:   { fontSize: 11, color: TEXT_MUTED },
+  statDivider: { width: 1, height: 26, backgroundColor: BORDER_COLOR },
+
+  // ── Tab bar ──────────────────────────────────────────────────────────────
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: CARD_WHITE,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 14,
+    padding: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tab:           { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
   tabActive:     { backgroundColor: PRIMARY_TEAL },
   tabText:       { fontSize: 14, fontWeight: "600", color: TEXT_MUTED },
   tabTextActive: { color: "#fff" },
 
-  // Body
-  body:         { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 120 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: TEXT_DARK, marginTop: 20, marginBottom: 10 },
+  // ── Body ─────────────────────────────────────────────────────────────────
+  body: { paddingHorizontal: 16, paddingTop: 4 },
 
-  // Card
+  sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 22, marginBottom: 12 },
+  sectionTitle:    { fontSize: 15, fontWeight: "700", color: TEXT_DARK },
+  sectionTitleLine:{ flex: 1, height: 1, backgroundColor: BORDER_COLOR },
+
+  // ── Card ─────────────────────────────────────────────────────────────────
   card: {
-    backgroundColor: CARD_WHITE, borderRadius: 14, padding: 16, marginBottom: 8,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    backgroundColor: CARD_WHITE,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  bioText:   { fontSize: 14, color: TEXT_DARK, lineHeight: 22 },
-  emptyText: { fontSize: 14, color: TEXT_MUTED, textAlign: "center", paddingVertical: 8 },
+  bioText: { fontSize: 14, color: TEXT_DARK, lineHeight: 23 },
 
-  // Skills chips
-  chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip:     { backgroundColor: TEAL_LIGHT, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
+  emptyCard: {
+    backgroundColor: CARD_WHITE,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+  emptyText: { fontSize: 14, color: TEXT_MUTED },
+
+  // ── Skills chips ──────────────────────────────────────────────────────────
+  chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 },
+  chip: {
+    backgroundColor: TEAL_LIGHT,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: TEAL_MID,
+  },
   chipText: { fontSize: 13, color: PRIMARY_TEAL, fontWeight: "600" },
 
-  // Availability
-  availRow:   { flexDirection: "row", justifyContent: "space-between", marginBottom: 14 },
+  // ── Availability ─────────────────────────────────────────────────────────
+  availRow:   { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
   dayCol:     { alignItems: "center", gap: 6 },
-  dayDot:     { width: 34, height: 34, borderRadius: 17 },
-  dotGreen:   { backgroundColor: "#D1FAE5", borderWidth: 2, borderColor: "#34D399" },
-  dotRed:     { backgroundColor: "#FEE2E2", borderWidth: 2, borderColor: "#FCA5A5" },
+  dayDot:     { width: 36, height: 36, borderRadius: 18 },
+  dotGreen:   { backgroundColor: SUCCESS_BG, borderWidth: 2, borderColor: SUCCESS_GREEN },
+  dotRed:     { backgroundColor: DANGER_BG,  borderWidth: 2, borderColor: DANGER_RED  },
   dayText:    { fontSize: 11, fontWeight: "600", color: TEXT_MUTED },
   legendRow:  { flexDirection: "row", gap: 20 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot:  { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 12, color: TEXT_MUTED },
 
-  // Portfolio
+  // ── Portfolio ─────────────────────────────────────────────────────────────
   portfolioCard: {
-    backgroundColor: CARD_WHITE, borderRadius: 14,
-    overflow: "hidden", marginBottom: 12,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    backgroundColor: CARD_WHITE,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  portfolioImage:  { width: "100%", height: 180 },
-  portfolioFooter: { padding: 14, gap: 4 },
+  portfolioImage:  { width: "100%", height: 190 },
+  portfolioFooter: { padding: 14, gap: 5 },
   portfolioTitle:  { fontSize: 15, fontWeight: "700", color: TEXT_DARK },
 
-  // Reviews
+  // ── Reviews ───────────────────────────────────────────────────────────────
   reviewSummaryCard: { alignItems: "center", gap: 8, paddingVertical: 20 },
   bigRating:         { fontSize: 52, fontWeight: "800", color: TEXT_DARK, lineHeight: 56 },
-  reviewSummaryText: { fontSize: 13, color: TEXT_MUTED, marginTop: 4 },
+  reviewSummaryText: { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
   reviewHeader:      { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
-  reviewAvatar:      { width: 38, height: 38, borderRadius: 19, backgroundColor: TEAL_LIGHT, alignItems: "center", justifyContent: "center" },
-  reviewAvatarText:  { fontSize: 16, fontWeight: "700", color: PRIMARY_TEAL },
-  reviewerName:      { fontSize: 14, fontWeight: "600", color: TEXT_DARK, marginBottom: 3 },
-  reviewDate:        { fontSize: 12, color: TEXT_MUTED },
-  reviewComment:     { fontSize: 14, color: TEXT_DARK, lineHeight: 21 },
+  reviewAvatar: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: TEAL_LIGHT,
+    alignItems: "center", justifyContent: "center",
+  },
+  reviewAvatarText: { fontSize: 16, fontWeight: "700", color: PRIMARY_TEAL },
+  reviewerName:     { fontSize: 14, fontWeight: "600", color: TEXT_DARK, marginBottom: 3 },
+  reviewDate:       { fontSize: 12, color: TEXT_MUTED },
+  reviewComment:    { fontSize: 14, color: TEXT_DARK, lineHeight: 21 },
 
-  // Booking bar (UPDATED for project-based pricing)
+  // ── Booking bar ───────────────────────────────────────────────────────────
   bookingBar: {
     position: "absolute", bottom: 0, left: 0, right: 0,
     backgroundColor: CARD_WHITE,
     borderTopWidth: 1, borderTopColor: BORDER_COLOR,
-    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28,
+    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 30,
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    shadowColor: "#000", shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 12,
   },
-  bookingRate:    { fontSize: 20, fontWeight: "800", color: TEXT_DARK },  // Slightly smaller
-  bookingRateSub: { fontSize: 13, fontWeight: "400", color: TEXT_MUTED },
-  bookingAvail:   { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
+  bookingBarLeft: { gap: 3 },
+  freeQuoteBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: TEAL_LIGHT,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+  },
+  freeQuoteLabel: { fontSize: 12, fontWeight: "700", color: PRIMARY_TEAL },
+  bookingAvail:   { fontSize: 12, color: TEXT_MUTED },
   bookBtn: {
-    backgroundColor: PRIMARY_TEAL, borderRadius: 12,
-    paddingHorizontal: 24, paddingVertical: 14,
-    flexDirection: "row", alignItems: "center",
+    backgroundColor: PRIMARY_TEAL,
+    borderRadius: 13,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: PRIMARY_TEAL,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  bookBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
-});  
+  bookBtnText: { fontSize: 14, fontWeight: "700", color: "#fff" },
+}); 
