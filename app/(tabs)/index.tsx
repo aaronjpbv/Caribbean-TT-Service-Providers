@@ -1,49 +1,21 @@
 // app/(tabs)/index.tsx
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT THIS FILE IS
-// ─────────────────────────────────────────────────────────────────────────────
-// This is the Home Screen of a React Native app built with Expo Router.
-// "(tabs)" means this screen lives inside a Tab Navigator — the bar at the
-// bottom of the screen that lets users switch between sections of the app.
-// "index.tsx" is special: Expo Router treats it as the *default* route for
-// any folder, so this screen loads first when you open the app.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── 1. IMPORTS ───────────────────────────────────────────────────────────────
-// Every React Native file starts with imports. Think of these as "tools" you
-// borrow from other packages before you can use them in your own code.
 
 import { supabase } from "@/utils/supabase";
-// "@/utils/supabase" is a local file (the "@" means "root of the project").
-// It exports a pre-configured Supabase client so we can talk to the database
-// without setting up the connection from scratch every time.
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-// importing two popular icon sets. Ionicons comes default with EXPO; 
-// MaterialCommunityIcons is a separate package we installed for more icon options.
-
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-// A simple key-value storage that persists on the device — like localStorage
-// in a web browser. We use it to remember whether the user is a guest.
 
 import { Link, useRouter } from "expo-router";
-// expo-router gives us two navigation tools:
-//   Link      — a component that works like an <a> tag on the web.
-//   useRouter — a hook that lets us navigate programmatically (e.g. after a
-//               button press inside a function).
 
-import { useEffect, useState } from "react";
-// Two of React's built-in Hooks. Hooks are explained in detail below.
-// useState  — stores a value that can change over time (state).
-// useEffect — runs side-effects (fetching data, subscriptions) after render.
+import { useEffect, useRef, useState } from "react";
 
 import {
   Alert,
   Animated,
   Dimensions,
   FlatList,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -55,11 +27,9 @@ import {
   View,
 } from "react-native";
 
-
+// ── 2. CONSTANTS ─────────────────────────────────────────────────────────────
 
 const { width } = Dimensions.get("window");
-// Destructure just "width" from the screen dimensions. Used to calculate
-// how wide the 3×3 category cards should be.
 
 const PRIMARY_TEAL  = "#1d3557";
 const PRIMARY_LIGHT = "#1A8A9C";
@@ -70,144 +40,85 @@ const TEXT_DARK     = "#1F2937";
 const TEXT_MUTED    = "#6B7280";
 
 // ── 3. STATIC DATA ───────────────────────────────────────────────────────────
-// When it goes live Category and Region data will come from the database. 
+
+type Category = {
+  id:   string;
+  name: string;
+  icon: string;
+  type: "ionicons" | "material";
+};
+
 const categories: Category[] = [
   { id: "all",         name: "All",            icon: "apps-outline",             type: "ionicons" },
-  { id: "plumbing",    name: "Plumbing",       icon: "pipe",                     type: "material" }, 
+  { id: "plumbing",    name: "Plumbing",       icon: "pipe",                     type: "material" },
   { id: "electrical",  name: "Electrical",     icon: "flash-outline",            type: "ionicons" },
   { id: "landscaping", name: "Lawn Care",      icon: "leaf-outline",             type: "ionicons" },
   { id: "cleaning",    name: "Cleaning",       icon: "sparkles-outline",         type: "ionicons" },
   { id: "painting",    name: "Painting",       icon: "color-palette-outline",    type: "ionicons" },
-  { id: "hvac",        name: "AC Services",    icon: "air-conditioner",          type: "material" },  
+  { id: "hvac",        name: "AC Services",    icon: "air-conditioner",          type: "material" },
   { id: "carpentry",   name: "Carpentry",      icon: "hammer-outline",           type: "ionicons" },
   { id: "security",    name: "Security",       icon: "shield-checkmark-outline", type: "ionicons" },
-  { id: "legal",       name: "Legal",          icon: "gavel",                    type: "material" }, // 👈 Updated to Gavel
+  { id: "legal",       name: "Legal",          icon: "gavel",                    type: "material" },
   { id: "admin",       name: "Admin Services", icon: "document-text-outline",    type: "ionicons" },
-]; 
-
-
-
-
-
+];
 
 const regions = ["All", "North", "Central", "South", "East", "West", "Tobago"];
 
-// - Type definations //
+// ── 4. TYPE DEFINITIONS ───────────────────────────────────────────────────────
 
 type Provider = {
-  id:       string;
+  id:       number;
   name:     string;
   category: string;
   region:   string;
   rating:   number;
   reviews:  number;
   verified: boolean;
-  image:    string | null; // "string | null" means it can be a URL or nothing
+  image:    string | null;
 };
 
-// ── 5. THE COMPONENT ─────────────────────────────────────────────────────────
-// A React Native screen is just a JavaScript function that returns JSX.
-// JSX looks like HTML but it actually compiles to React.createElement() calls.
-// "export default" makes this the file's main export so Expo Router can
-// find and render it automatically.
+// ── 5. COMPONENT ─────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
 
-  // ── 5a. STATE (useState Hook) ───────────────────────────────────────────
-  // useState is the most fundamental Hook. It lets a component "remember"
-  // a value between renders.
-  //
- 
-  
-  // Every time setValue is called React re-runs this function from the top
-  // and redraws only the parts of the UI that changed. This is the core idea
-  // behind React: UI = f(state).
+  // ── 5a. STATE ──────────────────────────────────────────────────────────
 
-  const [providers, setProviders]           = useState<Provider[]>([]);
-  // providers starts as an empty array. When Supabase returns data we call
-  // setProviders(data) and the list re-renders with real items.
-
-  const [searchQuery, setSearchQuery]       = useState("");
-  // Mirrors whatever the user types in the search bar. Updated on every
-  // keystroke via onChangeText={setSearchQuery}.
-
+  const [providers, setProviders]               = useState<Provider[]>([]);
+  const [searchQuery, setSearchQuery]           = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  // Tracks which category pill is active. Starts on "All".
-
-  const [selectedRegion, setSelectedRegion] = useState("All");
-
-
-  const [menuVisible, setMenuVisible]       = useState(false);
-  // Controls whether the dropdown profile menu is shown.
-
-  const [isGuest, setIsGuest]               = useState(false);
-  // True when the user skipped sign-in and is browsing as a guest.
-
-  // Animated values are also "state", but managed by React Native's
-  // Animated API instead of useState. They live outside the render cycle
-  // so animations run on the native thread — smoother than JS-driven state.
-  const [scaleAnim]   = useState(new Animated.Value(0.95));
-  const [opacityAnim] = useState(new Animated.Value(0));
-  // We destructure only the value (no setter) because Animated drives these
-  // internally — we never call setScaleAnim ourselves.
+  const [selectedRegion, setSelectedRegion]     = useState("All");
+  const [menuVisible, setMenuVisible]           = useState(false);
+  const [isGuest, setIsGuest]                   = useState(false);
+  const [scaleAnim]                             = useState(new Animated.Value(0.95));
+  const [opacityAnim]                           = useState(new Animated.Value(0));
+  
+  // Logo animation states - Conversational principle
+  const logoScaleAnim = useRef(new Animated.Value(0)).current;
+  const logoRotateAnim = useRef(new Animated.Value(0)).current;
+  const logoYAnim = useRef(new Animated.Value(20)).current;
 
   // ── 5b. ROUTER ─────────────────────────────────────────────────────────
-  const router = useRouter();
-  // useRouter gives us an object with methods like:
-  //   router.push("/some/path")    — navigate forward
-  //   router.replace("/path")      — navigate and remove current from history
-  //   router.back()                — go back one screen
-  // Use it inside event handlers where you can't use the <Link> component.
 
-  // ── 5c. SIDE EFFECTS (useEffect Hook) ──────────────────────────────────
-  // useEffect runs *after* the component renders. It's the right place for:
-  //   • Fetching data from an API
-  //   • Setting up subscriptions / event listeners
-  //   • Reading from AsyncStorage or other async sources
-  //
-  // Syntax:  useEffect(callback, dependencyArray)
-  //   • callback        — the function to run
-  //   • dependencyArray — React watches these values; if any change it re-runs
-  //                       the callback. An empty array [] means "run once,
-  //                       right after the first render" — equivalent to
-  //                       componentDidMount in class components.
+  const router = useRouter();
+
+  // ── 5c. SIDE EFFECTS ───────────────────────────────────────────────────
 
   useEffect(() => {
-
-    // Inner async function because useEffect's callback cannot be async itself
-    // (async functions return Promises, but useEffect expects void or a
-    // cleanup function).
     const fetchProviders = async () => {
-      const { data } = await supabase
-        .from("providers")
-        .select("*");
-      // .from()   — picks the table
-      // .select() — chooses columns ("*" means all of them)
-      // Supabase returns { data, error }. We only destructure data here;
-      // add error handling in production.
-      setProviders(data as Provider[] ?? []);
-      // "as Provider[]" is a TypeScript cast — we're telling the compiler
-      // "trust me, this data matches our type".
-      // "?? []" is the nullish coalescing operator — if data is null/undefined
-      // use an empty array instead so the app doesn't crash.
+      const { data } = await supabase.from("providers").select("*");
+      setProviders(data ?? []);
     };
 
     const checkUserStatus = async () => {
       try {
         const guestStatus = await AsyncStorage.getItem("isGuest");
-        // AsyncStorage.getItem returns the stored string or null.
         if (guestStatus === "true") {
           setIsGuest(true);
-          return; // Early return — no need to check Supabase auth
+          return;
         }
-
         const { data: { user } } = await supabase.auth.getUser();
-        // Nested destructuring: get data.user from the response.
         if (!user) {
           router.replace("/(auth)/sign-in");
-          // No authenticated user and not a guest → send to sign-in.
-          // replace() instead of push() so the user can't press Back to
-          // return to this screen without being logged in.
         }
       } catch (error) {
         console.error("Error checking user status:", error);
@@ -217,52 +128,58 @@ export default function HomeScreen() {
 
     fetchProviders();
     checkUserStatus();
-
+    
+    // Animate logo on mount - Conversational principle
+    Animated.parallel([
+      Animated.spring(logoScaleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 50,
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoYAnim, {
+        toValue: 0,
+        friction: 4,
+        tension: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoRotateAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
-  // [] — runs once on mount. If you put [selectedRegion] here instead, the
-  // effect would re-run every time the region changes (useful for server-side
-  // filtering; here we filter client-side so once is enough).
 
-  // ── 5d. DERIVED STATE ───────────────────────────────────────────────────
-  // This is NOT a hook — it's just a variable calculated from existing state.
-  // React re-renders the component whenever state changes, so this recalculates
-  // automatically. No need for useState or useEffect here.
+  // ── 5d. DERIVED STATE ──────────────────────────────────────────────────
 
   const filteredProviders = providers.filter((provider) => {
     const matchesRegion =
       selectedRegion === "All" || provider.region === selectedRegion;
 
     const matchesSearch =
-      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.category.toLowerCase().includes(searchQuery.toLowerCase());
+      (provider.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (provider.category ?? "").toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCategory =
       selectedCategory === "All" || provider.category === selectedCategory;
 
     return matchesRegion && matchesSearch && matchesCategory;
-    // All three conditions must be true for a provider to appear.
   });
 
-  // ── 5e. EVENT HANDLERS ──────────────────────────────────────────────────
-  // Plain functions defined inside the component so they close over state
-  // and setters. Arrow functions are the idiomatic React style.
+  // ── 5e. EVENT HANDLERS ─────────────────────────────────────────────────
 
   const handleCategoryPress = (categoryName: string) => {
     setSelectedCategory(categoryName);
-    // Calling any setter causes a re-render → filteredProviders recalculates
-    // → the list updates. No manual DOM manipulation needed.
   };
 
   const openMenu = () => {
     setMenuVisible(true);
-    // Animated.parallel runs multiple animations simultaneously.
     Animated.parallel([
       Animated.timing(scaleAnim, {
-        toValue: 1,        // animate to full size
-        duration: 200,     // milliseconds
+        toValue: 1,
+        duration: 200,
         useNativeDriver: true,
-        // useNativeDriver:true offloads the animation to the native thread.
-        // Always use it when animating transform/opacity — it's much smoother.
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
@@ -270,8 +187,6 @@ export default function HomeScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-    // .start() kicks off the animation. You can pass a callback:
-    // .start(() => console.log("animation done"))
   };
 
   const closeMenu = () => {
@@ -280,8 +195,6 @@ export default function HomeScreen() {
       Animated.timing(opacityAnim, { toValue: 0,    duration: 150, useNativeDriver: true }),
     ]).start(() => {
       setMenuVisible(false);
-      // Hide the Modal AFTER the animation finishes so the user sees the
-      // closing animation rather than an abrupt disappearance.
     });
   };
 
@@ -347,35 +260,74 @@ export default function HomeScreen() {
     router.push("/profile/profile");
   };
 
-  // ── 5f. JSX (the UI) ────────────────────────────────────────────────────
-  // Everything inside "return ()" is JSX. Rules to remember:
-  //   • Components start with a capital letter (View, Text, FlatList…)
-  //   • There must be a single root element — wrap siblings in <View> or <>.
-  //   • JavaScript expressions go inside {curly braces}.
-  //   • Styles are objects, not strings: style={{ color: "red" }}
-  //     or references to StyleSheet entries: style={styles.header}
-  //   • Self-closing tags need a slash: <View /> not <View>
+  // Logo press handler - Conversational interaction
+  const handleLogoPress = () => {
+    Animated.sequence([
+      Animated.timing(logoScaleAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoScaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  // Interpolate rotation for continuous subtle motion
+  const spin = logoRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '5deg'],
+  });
+
+  // ── 5f. JSX ────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.container}>
-      {/* StatusBar controls the device's top system bar */}
       <StatusBar barStyle="light-content" backgroundColor={PRIMARY_TEAL} />
 
       {/* ── HEADER ── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.greeting}>Blue Color</Text>
-            <Text style={styles.title}>Find Trusted Services</Text>
+          <View style={styles.brandContainer}>
+            {/* Logo - Iconic & Conversational */}
+            <TouchableOpacity 
+              onPress={handleLogoPress} 
+              activeOpacity={0.8}
+              style={styles.logoContainer}
+            >
+              <Animated.View
+                style={[
+                  styles.logoWrapper,
+                  {
+                    transform: [
+                      { scale: logoScaleAnim },
+                      { translateY: logoYAnim },
+                      { rotate: spin }
+                    ],
+                  },
+                ]}
+              >
+                <Image
+                  source={require('../../assets/images/logo.png')} // Update path as needed
+                  style={styles.logo}
+                  resizeMode="contain"
+                /> 
+              </Animated.View>
+            </TouchableOpacity>
+            
+            <View style={styles.brandText}>
+              <Text style={styles.greeting}>JobSite</Text> 
+              <Text style={styles.title}>Find Qualified Professionals your friends Trust</Text>
+            </View>
           </View>
-
-          {/* Profile button — opens the dropdown menu */}
+          
           <TouchableOpacity
             style={styles.userButton}
             onPress={openMenu}
             activeOpacity={0.8}
-            // activeOpacity dims the button to 80% opacity when pressed.
-            // 0 = fully transparent, 1 = no change. 0.8 is a subtle dim.
           >
             <Ionicons name="person-circle" size={44} color="#fff" />
           </TouchableOpacity>
@@ -390,16 +342,9 @@ export default function HomeScreen() {
               placeholderTextColor={TEXT_MUTED}
               style={styles.searchInput}
               value={searchQuery}
-              // "Controlled input" pattern:
-              //   value={searchQuery}          — display what's in state
-              //   onChangeText={setSearchQuery} — update state on each keystroke
-              // This keeps the UI in sync with state at all times.
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
-              // Conditional rendering: the clear button only appears when
-              // there is text. "&&" is the short-circuit pattern — if the
-              // left side is falsy, nothing renders.
               <TouchableOpacity onPress={() => setSearchQuery("")}>
                 <Ionicons name="close-circle" size={20} color={TEXT_MUTED} />
               </TouchableOpacity>
@@ -409,31 +354,19 @@ export default function HomeScreen() {
       </View>
 
       {/* ── DROPDOWN MENU MODAL ── */}
-      {/* Modal floats above everything else. transparent={true} lets us see
-          the screen behind the overlay. */}
       <Modal
         transparent
         visible={menuVisible}
         animationType="none"
-        // animationType="none" because we handle the animation ourselves
-        // with Animated above. If you used "fade" here AND Animated, you'd
-        // see two competing animations.
         onRequestClose={closeMenu}
-        // onRequestClose fires on Android when the hardware back button is
-        // pressed. Always handle it so the modal can be dismissed.
       >
-        {/* Pressable backdrop — tap outside the menu to close it */}
         <Pressable style={styles.modalOverlay} onPress={closeMenu}>
           <Animated.View
-            // Animated.View is the animated version of View. Wrap any element
-            // you want to animate with Animated.View (or Animated.Text, etc.)
             style={[
               styles.dropdownMenu,
               {
                 opacity: opacityAnim,
                 transform: [{ scale: scaleAnim }],
-                // Animated values are passed directly as style props.
-                // React Native reads them on the native thread each frame.
               },
             ]}
           >
@@ -441,7 +374,6 @@ export default function HomeScreen() {
               <Ionicons name="person-circle" size={48} color={PRIMARY_TEAL} />
               <Text style={styles.menuTitle}>
                 {isGuest ? "Guest" : "My Account"}
-                {/* Ternary expression: condition ? ifTrue : ifFalse */}
               </Text>
             </View>
 
@@ -461,8 +393,6 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={22} color="#E74C3C" />
               <Text style={[styles.menuItemText, styles.logoutText]}>
-                {/* Passing an array to style merges the objects left-to-right.
-                    logoutText overrides the colour set in menuItemText. */}
                 {isGuest ? "Exit Guest Mode" : "Logout"}
               </Text>
             </TouchableOpacity>
@@ -475,7 +405,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* ── CATEGORY GRID ── */}
         {/* ── CATEGORY GRID ── */}
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Browse Categories</Text>
@@ -496,7 +425,6 @@ export default function HomeScreen() {
                     selectedCategory === category.name && styles.categoryIcon3x3Active,
                   ]}
                 >
-                  {/* Dynamically switch icon families based on data type */}
                   {category.type === "material" ? (
                     <MaterialCommunityIcons
                       name={category.icon as any}
@@ -511,7 +439,6 @@ export default function HomeScreen() {
                     />
                   )}
                 </View>
-                
                 <Text
                   style={[
                     styles.categoryName3x3,
@@ -524,14 +451,13 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </View>  
+        </View>
 
         {/* ── REGION FILTER ── */}
         <View style={styles.filterSection}>
           <Text style={styles.sectionTitle}>Filter by Region</Text>
           <ScrollView
             horizontal
-            // horizontal={true} makes this scroll left-right instead of up-down
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterScroll}
           >
@@ -567,28 +493,20 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-      
           <FlatList
             data={filteredProviders}
             scrollEnabled={false}
-            keyExtractor={(item) => item.id}
-          
+            keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
-              // renderItem receives an object; we destructure "item" from it.
-              // <Link> from expo-router wraps a Touchable with a navigation
-              // target. "asChild" passes the href down to the child instead
-              // of rendering its own element.
               <Link href={`/provider/${item.id}`} asChild>
                 <TouchableOpacity style={styles.card} activeOpacity={0.9}>
                   <View style={styles.cardImageContainer}>
                     <View style={styles.cardImagePlaceholder}>
                       <Text style={styles.avatarText}>
-                        {item.name
+                        {(item.name ?? "?")
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")}
-                        {/* Split the name on spaces, take the first letter of
-                            each word, join them: "Marcus Holt" → "MH" */}
                       </Text>
                     </View>
                     {item.verified && (
@@ -629,8 +547,6 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </Link>
             )}
-            // ListEmptyComponent renders when data is an empty array.
-            // Cleaner than putting an if/else around the whole FlatList.
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Ionicons name="search-outline" size={48} color={TEXT_MUTED} />
@@ -658,26 +574,15 @@ export default function HomeScreen() {
 }
 
 // ── 6. STYLES ─────────────────────────────────────────────────────────────────
-// StyleSheet.create() validates style properties at dev time and (on older RN
-// versions) serialises styles to native IDs once, rather than on every render.
-// Think of it as React Native's equivalent of a CSS file.
-//
-// Key differences from CSS:
-//   • camelCase instead of kebab-case (backgroundColor not background-color)
-//   • Numbers for pixel values, not strings ("16" not "16px")
-//   • No cascading — each component gets exactly the styles you give it
-//   • Flexbox is the ONLY layout system (and it defaults to column, not row)
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // flex:1 tells this View to fill all available space. On the root View
-    // this means the full screen.
     backgroundColor: BG_GRAY,
   },
   header: {
     backgroundColor: PRIMARY_TEAL,
-    paddingTop: 50,       // clears the status bar on most phones
+    paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 25,
     borderBottomLeftRadius: 24,
@@ -687,35 +592,57 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-    // elevation is Android's equivalent of box-shadow.
-    // shadowColor/Offset/Opacity/Radius work on iOS.
-    // You need both to get shadows on both platforms.
   },
   headerTop: {
     flexDirection: "row",
-    // Default flexDirection is "column" (top-to-bottom).
-    // "row" arranges children left-to-right.
     justifyContent: "space-between",
-    // Pushes children to opposite ends of the main axis (row here).
     alignItems: "flex-start",
-    // Aligns children to the top on the cross axis (column here).
     marginBottom: 20,
   },
+  // Unified brand container
+  brandContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  // Logo container - Iconic & Universal
+  logoContainer: {
+    marginRight: 12,
+  },
+  logoWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.3)",
+    overflow: "hidden",
+  },
+  logo: {
+    width: "85%",
+    height: "85%",
+  },
+  brandText: {
+    flex: 1,
+  },
   greeting: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
+    color: "#FFBF00",  
+    fontSize: 18,
     marginBottom: 4,
   },
   title: {
     color: "#fff",
-    fontSize: 26,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "700",
     letterSpacing: -0.5,
+    lineHeight: 24,
   },
   userButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,         // half of width/height = circle
+    borderRadius: 24,
     backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
@@ -792,8 +719,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    // flex:1 inside a row makes this input take up ALL remaining space
-    // after the icons on each side have taken their fixed width.
     marginLeft: 12,
     fontSize: 16,
     color: TEXT_DARK,
@@ -816,16 +741,12 @@ const styles = StyleSheet.create({
   categoriesGrid3x3: {
     flexDirection: "row",
     flexWrap: "wrap",
-    // flexWrap:"wrap" lets children spill onto a new row when the row is full.
-    // Combined with the calculated width below, this creates the 3×3 grid.
     justifyContent: "space-between",
     gap: 12,
   },
   categoryCard3x3: {
     width: (width - 64) / 3,
-    // screen width minus (20px left pad + 20px right pad + 2×12px gaps) ÷ 3
-    // = exactly one-third of usable width.
-    aspectRatio: 1, // height = width, making perfect squares
+    aspectRatio: 1,
     backgroundColor: CARD_WHITE,
     borderRadius: 20,
     padding: 12,
@@ -844,8 +765,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     transform: [{ scale: 1.02 }],
-    // transform takes an array of transform objects. scale:1.02 makes the
-    // active card 2% larger — a subtle "pop" effect.
   },
   categoryIcon3x3: {
     width: 52,
@@ -949,9 +868,6 @@ const styles = StyleSheet.create({
   },
   verifiedBadge: {
     position: "absolute",
-    // position:"absolute" takes the element out of the normal flow.
-    // It's positioned relative to its nearest ancestor with
-    // position:"relative" (cardImageContainer above).
     bottom: -4,
     right: -4,
     backgroundColor: "#fff",
@@ -1056,4 +972,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
-});  
+}); 
