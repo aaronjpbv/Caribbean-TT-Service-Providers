@@ -1,34 +1,21 @@
 // app/(tabs)/_layout.tsx
-import { Stack } from "expo-router";
+import { Tabs } from "expo-router";
+import FloatingTabBar from "../../components/FloatingTabBar";
 
-export default function StackLayout() {
+export default function TabLayout() {
   return (
-    <Stack
-screenOptions={{
-  headerShown: true,
-  headerStyle: {
-    backgroundColor: "#E98260",
-  },
-  headerTintColor: "#fff",
-  headerTitleStyle: {
-    fontWeight: "bold",
-  },
-}}
+    <Tabs
+      tabBar={() => <FloatingTabBar />}
+      screenOptions={{
+        headerStyle: { backgroundColor: "#1B2B4B" },
+        headerTintColor: "#fff",
+        headerTitleStyle: { fontWeight: "bold" },
+      }}
     >
-      <Stack.Screen
-        name="index"
-        options={{
-          title: "Home",
-          headerShown: false, // No header for home screen
-        }}
-      />
-      <Stack.Screen
-        name="favorites"
-        options={{
-          title: "Favorites",
-          headerShown: true,
-        }}
-      />
-    </Stack>
+      <Tabs.Screen name="index" options={{ headerShown: false }} />
+      <Tabs.Screen name="bookings" options={{ title: "Bookings" }} />
+      <Tabs.Screen name="messages" options={{ title: "Messages" }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+    </Tabs>
   );
 }
