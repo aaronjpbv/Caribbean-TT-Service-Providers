@@ -318,7 +318,7 @@ export default function SignUpScreen() {
       router.replace(
         selectedRole === "provider"
           ? "/(auth)/complete-provider-sign-up"
-          : "/(tabs)/index"
+          : "/(tabs)" 
       );
 
     } catch (err: any) {

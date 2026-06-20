@@ -23,9 +23,9 @@ screenOptions={{
         }}
       />
       <Stack.Screen
-        name="favorites"
+        name="index"
         options={{
-          title: "Favorites",
+          title: "profile", 
           headerShown: true,
         }}
       />
