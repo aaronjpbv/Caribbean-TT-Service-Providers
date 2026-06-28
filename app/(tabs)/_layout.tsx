@@ -12,20 +12,20 @@ export default function TabLayout() {
         headerTitleStyle: { fontWeight: "bold" },
       }}
     >
-      <Stack.Screen
+      <Tabs.Screen
         name="index"
         options={{
           title: "Home",
           headerShown: false, // No header for home screen
         }}
       />
-      <Stack.Screen
+      <Tabs.Screen
         name="favorites"
         options={{
           title: "Favorites",
           headerShown: true,
         }}
       />
-    </Stack>
+    </Tabs>
   );
 }
