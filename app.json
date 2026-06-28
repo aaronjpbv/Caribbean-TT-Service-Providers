@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.caribbeanappnew"
+      "package": "com.ansel_ali.caribbeanappnew"
     },
     "web": {
       "output": "static",
@@ -49,14 +49,14 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "eb602a5d-964f-427e-b651-f6e997c418f1"
+        "projectId": "cd898b65-fde9-4e3b-ad38-e5bb88f6faf6"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/eb602a5d-964f-427e-b651-f6e997c418f1"
+      "url": "https://u.expo.dev/cd898b65-fde9-4e3b-ad38-e5bb88f6faf6"
     }
   }
-}
+} 

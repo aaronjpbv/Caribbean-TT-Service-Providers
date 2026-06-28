@@ -1,6 +1,7 @@
 // app/_layout.tsx
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   // This is NOT a screen users see
@@ -8,19 +9,21 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <SafeAreaProvider>
+        <StatusBar style="light" />
 
-      <Stack>
-        {/* These ARE the screens */}
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="profile" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="provider/[id]"
-          options={{ title: "Details", headerShown: false }}
-        />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+        <Stack>
+          {/* These ARE the screens */}
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="profile" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="provider/[id]"
+            options={{ title: "Details", headerShown: false }}
+          />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </SafeAreaProvider>
     </>
   );
 }
