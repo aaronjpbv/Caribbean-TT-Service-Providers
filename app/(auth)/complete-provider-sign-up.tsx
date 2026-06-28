@@ -51,7 +51,7 @@ export default function CompleteProviderSignUp() {
             if (insertError) throw insertError;
 
             // Navigate to dashboard on success
-            router.push("/tabs/index.tsx");    
+            router.push("/");     
             
         } catch (err) {
             setError(err.message);
