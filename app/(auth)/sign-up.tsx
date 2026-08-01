@@ -1,7 +1,7 @@
 // app/(auth)/sign-up.tsx
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,16 +20,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const THEME = {
-  primary:      "#0F6C7B",
+  primary: "#0F6C7B",
   primaryLight: "#E8F4F4",
-  surface:      "#FFFFFF",
-  background:   "#F8FAFC",
-  text:         "#111827",
-  textMuted:    "#6B7280",
-  error:        "#DC2626",
-  border:       "#E5E7EB",
-  radius:       16,
-  spacing:      { xs: 8, sm: 12, md: 16, lg: 24, xl: 32 },
+  surface: "#FFFFFF",
+  background: "#F8FAFC",
+  text: "#111827",
+  textMuted: "#6B7280",
+  error: "#DC2626",
+  border: "#E5E7EB",
+  radius: 16,
+  spacing: { xs: 8, sm: 12, md: 16, lg: 24, xl: 32 },
 } as const;
 
 type Role = "client" | "provider";
@@ -57,18 +57,18 @@ const InputField: React.FC<{
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
-  keyboardType?: React.NativeSyntheticEvent["keyboardType"];
+  keyboardType?: import("react-native").KeyboardTypeOptions;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   secureTextEntry?: boolean;
   rightIcon?: React.ReactNode;
   error?: string;
   required?: boolean;
   testID?: string;
-}> = ({ 
-  label, 
-  placeholder, 
-  value, 
-  onChangeText, 
+}> = ({
+  label,
+  placeholder,
+  value,
+  onChangeText,
   keyboardType = "default",
   autoCapitalize = "sentences",
   secureTextEntry = false,
@@ -82,10 +82,7 @@ const InputField: React.FC<{
       {label}
       {required && <Text style={styles.required}> *</Text>}
     </Text>
-    <View style={[
-      styles.inputContainer,
-      error && styles.inputError,
-    ]}>
+    <View style={[styles.inputContainer, error && styles.inputError]}>
       <TextInput
         style={styles.input}
         placeholder={placeholder}
@@ -100,8 +97,8 @@ const InputField: React.FC<{
         accessibilityLabel={label}
       />
       {rightIcon && (
-        <TouchableOpacity 
-          style={styles.inputIcon} 
+        <TouchableOpacity
+          style={styles.inputIcon}
           onPress={() => {}}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -117,10 +114,17 @@ const RoleSelector: React.FC<{
   selectedRole: Role;
   onRoleChange: (role: Role) => void;
 }> = ({ selectedRole, onRoleChange }) => {
-  const roles: { value: Role; label: string; icon: keyof typeof Ionicons.glyphMap }[] = useMemo(() => [
-    { value: "client", label: "Client", icon: "person" },
-    { value: "provider", label: "Provider", icon: "briefcase" },
-  ], []);
+  const roles: {
+    value: Role;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }[] = useMemo(
+    () => [
+      { value: "client", label: "Client", icon: "person" },
+      { value: "provider", label: "Provider", icon: "briefcase" },
+    ],
+    [],
+  );
 
   return (
     <View style={styles.inputGroup}>
@@ -131,10 +135,7 @@ const RoleSelector: React.FC<{
           return (
             <TouchableOpacity
               key={role.value}
-              style={[
-                styles.roleBtn,
-                isActive && styles.roleBtnActive,
-              ]}
+              style={[styles.roleBtn, isActive && styles.roleBtnActive]}
               onPress={() => onRoleChange(role.value)}
               activeOpacity={0.8}
               accessibilityRole="button"
@@ -146,10 +147,9 @@ const RoleSelector: React.FC<{
                 size={22}
                 color={isActive ? "#fff" : THEME.primary}
               />
-              <Text style={[
-                styles.roleText,
-                isActive && styles.roleTextActive,
-              ]}>
+              <Text
+                style={[styles.roleText, isActive && styles.roleTextActive]}
+              >
                 {role.label}
               </Text>
             </TouchableOpacity>
@@ -179,66 +179,84 @@ export default function SignUpScreen() {
 
   // Animation handlers
   const [scaleAnim] = useState(new Animated.Value(1));
-  const handlePressIn = useCallback(() => 
-    Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true }).start(), 
-  [scaleAnim]);
-  
-  const handlePressOut = useCallback(() => 
-    Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }).start(), 
-  [scaleAnim]);
+  const handlePressIn = useCallback(
+    () =>
+      Animated.spring(scaleAnim, {
+        toValue: 0.97,
+        useNativeDriver: true,
+      }).start(),
+    [scaleAnim],
+  );
+
+  const handlePressOut = useCallback(
+    () =>
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }).start(),
+    [scaleAnim],
+  );
 
   // Helpers
-  const updateField = useCallback(<K extends keyof FormState>(
-    field: K, 
-    value: FormState[K]
-  ) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    if (errors[field as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  }, [errors]);
+  const updateField = useCallback(
+    <K extends keyof FormState>(field: K, value: FormState[K]) => {
+      setForm((prev) => ({ ...prev, [field]: value }));
+      if (errors[field as keyof FormErrors]) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+    },
+    [errors],
+  );
 
-  const showError = useCallback((message: string, field?: keyof FormErrors) => {
-    if (field) {
-      setErrors(prev => ({ ...prev, [field]: message, general: undefined }));
-    } else {
-      setErrors(prev => ({ ...prev, general: message }));
-      Animated.timing(errorOpacity, { 
-        toValue: 1, 
-        duration: 200, 
-        useNativeDriver: true 
-      }).start();
-    }
-  }, [errorOpacity]);
+  const showError = useCallback(
+    (message: string, field?: keyof FormErrors) => {
+      if (field) {
+        setErrors((prev) => ({
+          ...prev,
+          [field]: message,
+          general: undefined,
+        }));
+      } else {
+        setErrors((prev) => ({ ...prev, general: message }));
+        Animated.timing(errorOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }
+    },
+    [errorOpacity],
+  );
 
   const clearGeneralError = useCallback(() => {
     if (!errors.general) return;
-    Animated.timing(errorOpacity, { 
-      toValue: 0, 
-      duration: 150, 
-      useNativeDriver: true 
-    }).start(() => setErrors(prev => ({ ...prev, general: undefined })));
+    Animated.timing(errorOpacity, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => setErrors((prev) => ({ ...prev, general: undefined })));
   }, [errorOpacity, errors.general]);
 
   // Validation
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
-    
+
     if (!form.fullName.trim()) {
       newErrors.fullName = "Full name is required";
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!form.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!emailRegex.test(form.email)) {
       newErrors.email = "Please enter a valid email";
     }
-    
+
     if (selectedRole === "provider" && !form.phoneNumber.trim()) {
       newErrors.phoneNumber = "Phone number is required for providers";
     }
-    
+
     if (!form.password) {
       newErrors.password = "Password is required";
     } else if (form.password.length < 8) {
@@ -252,14 +270,14 @@ export default function SignUpScreen() {
   // Sign-up handler
   const handleSignUp = useCallback(async () => {
     clearGeneralError();
-    
+
     if (!validateForm()) {
       // Focus first error field (optional enhancement)
       return;
     }
 
     setLoading(true);
-    
+
     try {
       // Step 1: Create Supabase auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -281,7 +299,10 @@ export default function SignUpScreen() {
         if (authError.message.includes("already registered")) {
           showError("An account with this email already exists.", "email");
         } else if (authError.message.includes("weak password")) {
-          showError("Password is too weak. Use at least 8 characters.", "password");
+          showError(
+            "Password is too weak. Use at least 8 characters.",
+            "password",
+          );
         } else {
           throw authError;
         }
@@ -294,19 +315,21 @@ export default function SignUpScreen() {
 
       // Step 2: Insert into public.users table
       // Note: If using Supabase trigger, this step may be optional
-      const { error: insertError } = await supabase
-        .from("users")
-        .upsert({ // upsert handles both insert and update safely
+      const { error: insertError } = await supabase.from("users").upsert(
+        {
+          // upsert handles both insert and update safely
           id: authData.user.id,
           email: form.email.trim().toLowerCase(),
           full_name: form.fullName.trim(),
           phone: form.phoneNumber.trim() || null,
           role: selectedRole,
           created_at: new Date().toISOString(),
-        }, { 
+        },
+        {
           onConflict: "id", // Handle potential duplicate auth/user sync
-          ignoreDuplicates: false 
-        });
+          ignoreDuplicates: false,
+        },
+      );
 
       if (insertError) {
         console.error("Users table insert error:", insertError);
@@ -316,11 +339,10 @@ export default function SignUpScreen() {
 
       // Step 3: Navigate based on role
       router.replace(
-        selectedRole === "provider"
+        (selectedRole === "provider"
           ? "/(auth)/complete-provider-sign-up"
-          : "/(tabs)/index"
+          : "/(tabs)/index") as Href,
       );
-
     } catch (err: any) {
       console.error("SignUp error:", err);
       showError(err.message || "Failed to create account. Please try again.");
@@ -357,12 +379,12 @@ export default function SignUpScreen() {
 
           <View style={styles.card}>
             {/* Role selector */}
-            <RoleSelector 
-              selectedRole={selectedRole} 
+            <RoleSelector
+              selectedRole={selectedRole}
               onRoleChange={(role) => {
                 setSelectedRole(role);
                 clearGeneralError();
-              }} 
+              }}
             />
 
             {/* Full name */}
@@ -420,7 +442,9 @@ export default function SignUpScreen() {
                   name={form.showPassword ? "eye-off" : "eye"}
                   size={20}
                   color={THEME.textMuted}
-                  onPress={() => updateField("showPassword", !form.showPassword)}
+                  onPress={() =>
+                    updateField("showPassword", !form.showPassword)
+                  }
                 />
               }
               testID="input-password"
@@ -428,7 +452,7 @@ export default function SignUpScreen() {
 
             {/* General Error banner */}
             {errors.general && (
-              <Animated.View 
+              <Animated.View
                 style={[styles.errorBox, { opacity: errorOpacity }]}
                 accessibilityLiveRegion="polite"
               >
@@ -436,7 +460,7 @@ export default function SignUpScreen() {
                 <Text style={styles.errorText} testID="error-message">
                   {errors.general}
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={clearGeneralError}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
@@ -449,7 +473,7 @@ export default function SignUpScreen() {
             <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
               <TouchableOpacity
                 style={[
-                  styles.primaryBtn, 
+                  styles.primaryBtn,
                   loading && styles.primaryBtnDisabled,
                 ]}
                 onPress={handleSignUp}
@@ -472,7 +496,7 @@ export default function SignUpScreen() {
             {/* Sign-in link */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => router.push("/(auth)/sign-in")}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
@@ -484,12 +508,10 @@ export default function SignUpScreen() {
             <View style={styles.terms}>
               <Text style={styles.termsText}>
                 By continuing, you agree to our{" "}
-                <Text style={styles.termsLink}>Terms of Service</Text>
-                {" "}&{" "}
+                <Text style={styles.termsLink}>Terms of Service</Text> &{" "}
                 <Text style={styles.termsLink}>Privacy Policy</Text>
               </Text>
             </View>
-
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -499,65 +521,65 @@ export default function SignUpScreen() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: THEME.background 
+  container: {
+    flex: 1,
+    backgroundColor: THEME.background,
   },
-  scroll: { 
-    padding: THEME.spacing.md, 
-    paddingBottom: THEME.spacing.xl 
+  scroll: {
+    padding: THEME.spacing.md,
+    paddingBottom: THEME.spacing.xl,
   },
-  header: { 
+  header: {
     marginBottom: THEME.spacing.lg,
     marginTop: THEME.spacing.sm,
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: "800", 
-    color: THEME.text, 
+  title: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: THEME.text,
     letterSpacing: -0.5,
   },
-  subtitle: { 
-    fontSize: 15, 
-    color: THEME.textMuted, 
-    marginTop: 4 
+  subtitle: {
+    fontSize: 15,
+    color: THEME.textMuted,
+    marginTop: 4,
   },
-  card: { 
-    backgroundColor: THEME.surface, 
-    borderRadius: THEME.radius, 
-    padding: THEME.spacing.md, 
-    shadowColor: "#000", 
-    shadowOpacity: 0.04, 
-    shadowRadius: 12, 
+  card: {
+    backgroundColor: THEME.surface,
+    borderRadius: THEME.radius,
+    padding: THEME.spacing.md,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
     elevation: 2,
   },
-  
+
   // Input styles
-  inputGroup: { 
-    marginBottom: THEME.spacing.sm 
+  inputGroup: {
+    marginBottom: THEME.spacing.sm,
   },
-  label: { 
-    fontSize: 13, 
-    fontWeight: "600", 
-    color: THEME.text, 
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: THEME.text,
     marginBottom: 6,
     marginLeft: 2,
   },
-  required: { 
-    color: THEME.error, 
-    fontWeight: "700" 
+  required: {
+    color: THEME.error,
+    fontWeight: "700",
   },
   inputContainer: {
     position: "relative",
   },
-  input: { 
-    backgroundColor: THEME.background, 
-    borderRadius: 12, 
-    paddingHorizontal: 14, 
-    paddingVertical: 14, 
-    fontSize: 16, 
-    color: THEME.text, 
-    borderWidth: 1, 
+  input: {
+    backgroundColor: THEME.background,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: THEME.text,
+    borderWidth: 1,
     borderColor: THEME.border,
     paddingRight: 40, // Space for icon
   },
@@ -578,94 +600,94 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 2,
   },
-  
+
   // Role selector
-  roleRow: { 
-    flexDirection: "row", 
-    gap: 12, 
-    marginBottom: THEME.spacing.sm 
+  roleRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: THEME.spacing.sm,
   },
-  roleBtn: { 
-    flex: 1, 
-    flexDirection: "row", 
-    alignItems: "center", 
-    justifyContent: "center", 
-    gap: 8, 
-    paddingVertical: 14, 
-    borderRadius: 12, 
-    backgroundColor: THEME.primaryLight, 
-    borderWidth: 1.5, 
-    borderColor: "transparent" 
+  roleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: THEME.primaryLight,
+    borderWidth: 1.5,
+    borderColor: "transparent",
   },
-  roleBtnActive: { 
-    backgroundColor: THEME.primary, 
-    borderColor: THEME.primary 
+  roleBtnActive: {
+    backgroundColor: THEME.primary,
+    borderColor: THEME.primary,
   },
-  roleText: { 
-    fontSize: 15, 
-    fontWeight: "600", 
-    color: THEME.primary 
+  roleText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: THEME.primary,
   },
-  roleTextActive: { 
-    color: "#fff" 
+  roleTextActive: {
+    color: "#fff",
   },
-  
+
   // Error banner
-  errorBox: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    gap: 8, 
-    backgroundColor: "#FEF2F2", 
-    padding: 12, 
-    borderRadius: 10, 
-    marginBottom: 16, 
-    borderWidth: 1, 
-    borderColor: "#FECACA" 
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FECACA",
   },
-  errorText: { 
-    fontSize: 13, 
-    color: THEME.error, 
-    fontWeight: "500", 
-    flex: 1 
+  errorText: {
+    fontSize: 13,
+    color: THEME.error,
+    fontWeight: "500",
+    flex: 1,
   },
-  
+
   // Primary button
-  primaryBtn: { 
-    backgroundColor: THEME.primary, 
-    paddingVertical: 16, 
-    borderRadius: 12, 
-    alignItems: "center", 
+  primaryBtn: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
     marginTop: THEME.spacing.xs,
     flexDirection: "row",
     justifyContent: "center",
     minHeight: 52,
   },
-  primaryBtnDisabled: { 
-    opacity: 0.7 
+  primaryBtnDisabled: {
+    opacity: 0.7,
   },
-  primaryBtnText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    fontWeight: "700" 
+  primaryBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
-  
+
   // Footer
-  footer: { 
-    flexDirection: "row", 
-    justifyContent: "center", 
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
     paddingBottom: 8,
   },
-  footerText: { 
-    color: THEME.textMuted, 
-    fontSize: 14 
+  footerText: {
+    color: THEME.textMuted,
+    fontSize: 14,
   },
-  footerLink: { 
-    color: THEME.primary, 
-    fontWeight: "600", 
-    fontSize: 14 
+  footerLink: {
+    color: THEME.primary,
+    fontWeight: "600",
+    fontSize: 14,
   },
-  
+
   // Terms
   terms: {
     marginTop: 16,
@@ -683,4 +705,4 @@ const styles = StyleSheet.create({
     color: THEME.primary,
     fontWeight: "600",
   },
-}); 
+});

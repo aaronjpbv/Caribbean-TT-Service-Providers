@@ -39,7 +39,8 @@ export default function ProviderDashboardLayout() {
         options={{ title: "My Availability" }}
       />
       <Stack.Screen name="reviews" options={{ title: "Customer Reviews" }} />
-      <Stack.Screen name="messages" options={{ headerShown: false }} />
+      {/* ✅ title added so it doesn't fall back to the raw route name */}
+      <Stack.Screen name="messages" options={{ title: "Messages" }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
     </Stack>
   );

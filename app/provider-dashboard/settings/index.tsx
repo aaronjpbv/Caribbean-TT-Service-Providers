@@ -1,13 +1,16 @@
 // app/provider-dashboard/settings/index.tsx
+
+import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const PRIMARY_TEAL = "#0F6C7B";
@@ -46,19 +49,86 @@ const settingsSections: SettingItem[][] = [
     },
   ],
   [
-    { icon: "notifications-outline", title: "Notifications", hasSwitch: true },
-    { icon: "moon-outline", title: "Dark Mode", hasSwitch: true },
+    {
+      icon: "notifications-outline",
+      title: "Notifications",
+      hasSwitch: true,
+    },
+    {
+      icon: "moon-outline",
+      title: "Dark Mode",
+      hasSwitch: true,
+    },
   ],
   [
-    { icon: "help-circle-outline", title: "Help & Support" },
-    { icon: "document-text-outline", title: "Terms of Service" },
-    { icon: "shield-checkmark-outline", title: "Privacy Policy" },
+    {
+      icon: "help-circle-outline",
+      title: "Help & Support",
+    },
+    {
+      icon: "document-text-outline",
+      title: "Terms of Service",
+    },
+    {
+      icon: "shield-checkmark-outline",
+      title: "Privacy Policy",
+    },
   ],
-  [{ icon: "log-out-outline", title: "Logout", danger: true }],
+  [
+    {
+      icon: "log-out-outline",
+      title: "Logout",
+      subtitle: "Sign out of your provider account",
+      danger: true,
+    },
+  ],
 ];
 
 export default function ProviderSettings() {
   const router = useRouter();
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to sign out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            const { error } = await supabase.auth.signOut();
+
+            if (error) {
+              Alert.alert("Logout Failed", error.message);
+              return;
+            }
+
+            // Remove this if your root auth listener already redirects users.
+            router.replace("/(auth)/sign-in");
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  const handlePress = (item: SettingItem) => {
+    if (item.title === "Logout") {
+      handleLogout();
+      return;
+    }
+
+    if (item.route) {
+      router.push(item.route as any);
+      return;
+    }
+
+    Alert.alert("Coming Soon", `${item.title} isn't available yet.`);
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -71,7 +141,8 @@ export default function ProviderSettings() {
                 styles.settingItem,
                 index === section.length - 1 && styles.lastItem,
               ]}
-              onPress={() => item.route && router.push(item.route as any)}
+              onPress={() => handlePress(item)}
+              disabled={item.hasSwitch}
             >
               <View
                 style={[styles.iconContainer, item.danger && styles.dangerIcon]}
@@ -82,6 +153,7 @@ export default function ProviderSettings() {
                   color={item.danger ? "#EF4444" : PRIMARY_TEAL}
                 />
               </View>
+
               <View style={styles.settingContent}>
                 <Text
                   style={[
@@ -91,12 +163,16 @@ export default function ProviderSettings() {
                 >
                   {item.title}
                 </Text>
+
                 {item.subtitle && (
                   <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
                 )}
               </View>
+
               {item.hasSwitch ? (
-                <Switch />
+                <Switch value={false} />
+              ) : item.danger ? (
+                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
               ) : (
                 <Ionicons name="chevron-forward" size={20} color={TEXT_MUTED} />
               )}
@@ -115,13 +191,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BG_GRAY,
   },
+
   section: {
     backgroundColor: CARD_WHITE,
     marginTop: 16,
     marginHorizontal: 16,
     borderRadius: 16,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
+
   settingItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -129,9 +215,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
+
   lastItem: {
     borderBottomWidth: 0,
   },
+
   iconContainer: {
     width: 40,
     height: 40,
@@ -140,26 +228,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   dangerIcon: {
     backgroundColor: "#FEE2E2",
   },
+
   settingContent: {
     flex: 1,
     marginLeft: 12,
   },
+
   settingTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: TEXT_DARK,
   },
+
   dangerText: {
     color: "#EF4444",
   },
+
   settingSubtitle: {
     fontSize: 13,
     color: TEXT_MUTED,
     marginTop: 2,
   },
+
   version: {
     textAlign: "center",
     fontSize: 12,
