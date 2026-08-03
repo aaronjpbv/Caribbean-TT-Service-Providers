@@ -1,7 +1,9 @@
 // app/provider-dashboard/index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -9,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { supabase } from "../../lib/supabase"; // Ensure this path matches your project structure
 
 const { width } = Dimensions.get("window");
 const PRIMARY_TEAL = "#0F6C7B";
@@ -25,71 +28,195 @@ interface DashboardCard {
   color: string;
 }
 
-const dashboardItems: DashboardCard[] = [
-  {
-    title: "Bookings",
-    icon: "calendar",
-    route: "/provider-dashboard/bookings",
-    badge: 3,
-    color: "#0F6C7B",
-  },
-  {
-    title: "Earnings",
-    icon: "wallet",
-    route: "/provider-dashboard/earnings",
-    color: "#10B981",
-  },
-  {
-    title: "Portfolio",
-    icon: "images",
-    route: "/provider-dashboard/portfolio",
-    color: "#8B5CF6",
-  },
-  {
-    title: "Availability",
-    icon: "time",
-    route: "/provider-dashboard/availability",
-    color: "#F59E0B",
-  },
-  {
-    title: "Reviews",
-    icon: "star",
-    route: "/provider-dashboard/reviews",
-    badge: 12,
-    color: "#EC4899",
-  },
-  {
-    title: "Messages",
-    icon: "chatbubbles",
-    route: "/provider-dashboard/messages",
-    badge: 5,
-    color: "#3B82F6",
-  },
-  {
-    title: "Settings",
-    icon: "settings",
-    route: "/provider-dashboard/settings",
-    color: "#6B7280",
-  },
-];
-
 export default function ProviderDashboard() {
   const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [stats, setStats] = useState({
+    earnings: 0,
+    jobsDone: 0,
+    rating: 0,
+  });
+  const [badges, setBadges] = useState({
+    bookings: 0,
+    messages: 0,
+    reviews: 0,
+  });
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // 1. Get the current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 2. Get Provider Profile Details
+      const { data: provider, error: providerError } = await supabase
+        .from("providers")
+        .select("id, is_available")
+        .eq("user_id", user.id)
+        .single();
+
+      if (providerError || !provider) {
+        console.error("Provider profile not found", providerError);
+        return;
+      }
+
+      setIsAvailable(provider.is_available);
+
+      // 3. Fetch Completed Bookings for Earnings & Jobs Done
+      // Tip: You can chain .gte('created_at', startOfMonth) to get strictly "This Month"
+      const { data: completedBookings } = await supabase
+        .from("bookings")
+        .select("price")
+        .eq("provider_id", provider.id)
+        .eq("status", "completed");
+
+      let totalEarnings = 0;
+      let completedJobsCount = 0;
+
+      if (completedBookings) {
+        completedJobsCount = completedBookings.length;
+        totalEarnings = completedBookings.reduce(
+          (sum, job) => sum + (Number(job.price) || 0),
+          0,
+        );
+      }
+
+      // 4. Fetch Rating Average
+      const { data: reviews } = await supabase
+        .from("reviews")
+        .select("rating")
+        .eq("provider_id", provider.id);
+
+      let avgRating = 0;
+      if (reviews && reviews.length > 0) {
+        const sum = reviews.reduce(
+          (acc, curr) => acc + (Number(curr.rating) || 0),
+          0,
+        );
+        avgRating = sum / reviews.length;
+      }
+
+      setStats({
+        earnings: totalEarnings,
+        jobsDone: completedJobsCount,
+        rating: Number(avgRating.toFixed(1)), // Keep it to 1 decimal place
+      });
+
+      // 5. Fetch Badges (Counts for pending items)
+      const { count: pendingBookingsCount } = await supabase
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("provider_id", provider.id)
+        .eq("status", "pending");
+
+      const { count: unreadMessagesCount } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("receiver_id", user.id)
+        .eq("status", "sent"); // Assuming "sent" means delivered but unread
+
+      setBadges({
+        bookings: pendingBookingsCount || 0,
+        messages: unreadMessagesCount || 0,
+        reviews: 0, // Add logic here if you have a way to track 'unread' reviews
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Move the config inside the component so it can use the dynamic `badges` state
+  const dashboardItems: DashboardCard[] = [
+    {
+      title: "Bookings",
+      icon: "calendar",
+      route: "/provider-dashboard/bookings",
+      badge: badges.bookings,
+      color: "#0F6C7B",
+    },
+    {
+      title: "Earnings",
+      icon: "wallet",
+      route: "/provider-dashboard/earnings",
+      color: "#10B981",
+    },
+    {
+      title: "Portfolio",
+      icon: "images",
+      route: "/provider-dashboard/portfolio",
+      color: "#8B5CF6",
+    },
+    {
+      title: "Availability",
+      icon: "time",
+      route: "/provider-dashboard/availability",
+      color: "#F59E0B",
+    },
+    {
+      title: "Reviews",
+      icon: "star",
+      route: "/provider-dashboard/reviews",
+      badge: badges.reviews,
+      color: "#EC4899",
+    },
+    {
+      title: "Messages",
+      icon: "chatbubbles",
+      route: "/provider-dashboard/messages",
+      badge: badges.messages,
+      color: "#3B82F6",
+    },
+    {
+      title: "Settings",
+      icon: "settings",
+      route: "/provider-dashboard/settings",
+      color: "#6B7280",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color={PRIMARY_TEAL} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
       {/* Stats Overview */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>$1,240</Text>
+          <Text style={styles.statValue}>
+            ${stats.earnings.toLocaleString()}
+          </Text>
           <Text style={styles.statLabel}>This Month</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>24</Text>
+          <Text style={styles.statValue}>{stats.jobsDone}</Text>
           <Text style={styles.statLabel}>Jobs Done</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>4.9</Text>
+          <Text style={styles.statValue}>
+            {stats.rating > 0 ? stats.rating : "-"}
+          </Text>
           <Text style={styles.statLabel}>Rating</Text>
         </View>
       </View>
@@ -109,11 +236,11 @@ export default function ProviderDashboard() {
               ]}
             >
               <Ionicons name={item.icon} size={28} color={item.color} />
-              {item.badge && (
+              {item.badge && item.badge > 0 ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{item.badge}</Text>
                 </View>
-              )}
+              ) : null}
             </View>
             <Text style={styles.gridLabel}>{item.title}</Text>
           </TouchableOpacity>
@@ -124,13 +251,32 @@ export default function ProviderDashboard() {
       <View style={styles.statusCard}>
         <View style={styles.statusHeader}>
           <Text style={styles.statusTitle}>Current Status</Text>
-          <View style={styles.statusBadge}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Available</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: isAvailable ? "#D1FAE5" : "#FEE2E2" },
+            ]}
+          >
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: isAvailable ? "#10B981" : "#EF4444" },
+              ]}
+            />
+            <Text
+              style={[
+                styles.statusText,
+                { color: isAvailable ? "#059669" : "#B91C1C" },
+              ]}
+            >
+              {isAvailable ? "Available" : "Offline"}
+            </Text>
           </View>
         </View>
         <Text style={styles.statusSubtitle}>
-          You're visible to customers and can receive bookings
+          {isAvailable
+            ? "You're visible to customers and can receive bookings."
+            : "You are currently hidden from search results."}
         </Text>
       </View>
     </ScrollView>
@@ -245,7 +391,6 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#D1FAE5",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -254,13 +399,11 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#10B981",
     marginRight: 6,
   },
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#059669",
   },
   statusSubtitle: {
     fontSize: 13,

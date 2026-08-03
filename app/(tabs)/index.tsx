@@ -31,35 +31,75 @@ import {
 
 const { width } = Dimensions.get("window");
 
-const PRIMARY_TEAL  = "#1d3557";
+const PRIMARY_TEAL = "#1d3557";
 const PRIMARY_LIGHT = "#1A8A9C";
-const ACCENT_GOLD   = "#F5A623";
-const BG_GRAY       = "#F4F1EB";
-const CARD_WHITE    = "#FFFFFF";
-const TEXT_DARK     = "#1F2937";
-const TEXT_MUTED    = "#6B7280";
+const ACCENT_GOLD = "#F5A623";
+const BG_GRAY = "#F4F1EB";
+const CARD_WHITE = "#FFFFFF";
+const TEXT_DARK = "#1F2937";
+const TEXT_MUTED = "#6B7280";
 
 // ── 3. STATIC DATA ───────────────────────────────────────────────────────────
 
 type Category = {
-  id:   string;
+  id: string;
   name: string;
   icon: string;
   type: "ionicons" | "material";
 };
 
 const categories: Category[] = [
-  { id: "all",         name: "All",            icon: "apps-outline",             type: "ionicons" },
-  { id: "plumbing",    name: "Plumbing",       icon: "pipe",                     type: "material" },
-  { id: "electrical",  name: "Electrical",     icon: "flash-outline",            type: "ionicons" },
-  { id: "landscaping", name: "Lawn Care",      icon: "leaf-outline",             type: "ionicons" },
-  { id: "cleaning",    name: "Cleaning",       icon: "sparkles-outline",         type: "ionicons" },
-  { id: "painting",    name: "Painting",       icon: "color-palette-outline",    type: "ionicons" },
-  { id: "hvac",        name: "AC Services",    icon: "air-conditioner",          type: "material" },
-  { id: "carpentry",   name: "Carpentry",      icon: "hammer-outline",           type: "ionicons" },
-  { id: "security",    name: "Security",       icon: "shield-checkmark-outline", type: "ionicons" },
-  { id: "legal",       name: "Legal",          icon: "gavel",                    type: "material" },
-  { id: "admin",       name: "Admin Services", icon: "document-text-outline",    type: "ionicons" },
+  { id: "all", name: "All", icon: "apps-outline", type: "ionicons" },
+  { id: "plumbing", name: "Plumbing", icon: "pipe", type: "material" },
+  {
+    id: "electrical",
+    name: "Electrical",
+    icon: "flash-outline",
+    type: "ionicons",
+  },
+  {
+    id: "landscaping",
+    name: "Lawn Care",
+    icon: "leaf-outline",
+    type: "ionicons",
+  },
+  {
+    id: "cleaning",
+    name: "Cleaning",
+    icon: "sparkles-outline",
+    type: "ionicons",
+  },
+  {
+    id: "painting",
+    name: "Painting",
+    icon: "color-palette-outline",
+    type: "ionicons",
+  },
+  {
+    id: "hvac",
+    name: "AC Services",
+    icon: "air-conditioner",
+    type: "material",
+  },
+  {
+    id: "carpentry",
+    name: "Carpentry",
+    icon: "hammer-outline",
+    type: "ionicons",
+  },
+  {
+    id: "security",
+    name: "Security",
+    icon: "shield-checkmark-outline",
+    type: "ionicons",
+  },
+  { id: "legal", name: "Legal", icon: "gavel", type: "material" },
+  {
+    id: "admin",
+    name: "Admin Services",
+    icon: "document-text-outline",
+    type: "ionicons",
+  },
 ];
 
 const regions = ["All", "North", "Central", "South", "East", "West", "Tobago"];
@@ -67,31 +107,30 @@ const regions = ["All", "North", "Central", "South", "East", "West", "Tobago"];
 // ── 4. TYPE DEFINITIONS ───────────────────────────────────────────────────────
 
 type Provider = {
-  id:       number;
-  name:     string;
+  id: number;
+  company_name: string;
   category: string;
-  region:   string;
-  rating:   number;
-  reviews:  number;
+  region: string;
+  rating: number;
+  reviews: number;
   verified: boolean;
-  image:    string | null;
+  image: string | null;
 };
 
 // ── 5. COMPONENT ─────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-
   // ── 5a. STATE ──────────────────────────────────────────────────────────
 
-  const [providers, setProviders]               = useState<Provider[]>([]);
-  const [searchQuery, setSearchQuery]           = useState("");
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [selectedRegion, setSelectedRegion]     = useState("All");
-  const [menuVisible, setMenuVisible]           = useState(false);
-  const [isGuest, setIsGuest]                   = useState(false);
-  const [scaleAnim]                             = useState(new Animated.Value(0.95));
-  const [opacityAnim]                           = useState(new Animated.Value(0));
-  
+  const [selectedRegion, setSelectedRegion] = useState("All");
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
+  const [scaleAnim] = useState(new Animated.Value(0.95));
+  const [opacityAnim] = useState(new Animated.Value(0));
+
   // Logo animation states - Conversational principle
   const logoScaleAnim = useRef(new Animated.Value(0)).current;
   const logoRotateAnim = useRef(new Animated.Value(0)).current;
@@ -116,7 +155,9 @@ export default function HomeScreen() {
           setIsGuest(true);
           return;
         }
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           router.replace("/(auth)/sign-in");
         }
@@ -128,7 +169,7 @@ export default function HomeScreen() {
 
     fetchProviders();
     checkUserStatus();
-    
+
     // Animate logo on mount - Conversational principle
     Animated.parallel([
       Animated.spring(logoScaleAnim, {
@@ -158,8 +199,12 @@ export default function HomeScreen() {
       selectedRegion === "All" || provider.region === selectedRegion;
 
     const matchesSearch =
-      (provider.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (provider.category ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+      (provider.company_name ?? "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      (provider.category ?? "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
     const matchesCategory =
       selectedCategory === "All" || provider.category === selectedCategory;
@@ -191,8 +236,16 @@ export default function HomeScreen() {
 
   const closeMenu = () => {
     Animated.parallel([
-      Animated.timing(scaleAnim, { toValue: 0.95, duration: 150, useNativeDriver: true }),
-      Animated.timing(opacityAnim, { toValue: 0,    duration: 150, useNativeDriver: true }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
     ]).start(() => {
       setMenuVisible(false);
     });
@@ -233,7 +286,10 @@ export default function HomeScreen() {
         onPress: async () => {
           try {
             const { error } = await supabase.auth.signOut();
-            if (error) { Alert.alert("Error", error.message); return; }
+            if (error) {
+              Alert.alert("Error", error.message);
+              return;
+            }
             router.replace("/(auth)/sign-in");
           } catch (error) {
             console.error("Logout error:", error);
@@ -279,7 +335,7 @@ export default function HomeScreen() {
   // Interpolate rotation for continuous subtle motion
   const spin = logoRotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '5deg'],
+    outputRange: ["0deg", "5deg"],
   });
 
   // ── 5f. JSX ────────────────────────────────────────────────────────────
@@ -293,8 +349,8 @@ export default function HomeScreen() {
         <View style={styles.headerTop}>
           <View style={styles.brandContainer}>
             {/* Logo - Iconic & Conversational */}
-            <TouchableOpacity 
-              onPress={handleLogoPress} 
+            <TouchableOpacity
+              onPress={handleLogoPress}
               activeOpacity={0.8}
               style={styles.logoContainer}
             >
@@ -305,25 +361,27 @@ export default function HomeScreen() {
                     transform: [
                       { scale: logoScaleAnim },
                       { translateY: logoYAnim },
-                      { rotate: spin }
+                      { rotate: spin },
                     ],
                   },
                 ]}
               >
                 <Image
-                  source={require('../../assets/images/logo.png')} // Update path as needed
+                  source={require("../../assets/images/logo.png")} // Update path as needed
                   style={styles.logo}
                   resizeMode="contain"
-                /> 
+                />
               </Animated.View>
             </TouchableOpacity>
-            
+
             <View style={styles.brandText}>
-              <Text style={styles.greeting}>JobSite</Text> 
-              <Text style={styles.title}>Find Qualified Professionals your friends Trust</Text>
+              <Text style={styles.greeting}>JobSite</Text>
+              <Text style={styles.title}>
+                Find Qualified Professionals your friends Trust
+              </Text>
             </View>
           </View>
-          
+
           <TouchableOpacity
             style={styles.userButton}
             onPress={openMenu}
@@ -414,7 +472,8 @@ export default function HomeScreen() {
                 key={category.id}
                 style={[
                   styles.categoryCard3x3,
-                  selectedCategory === category.name && styles.categoryCard3x3Active,
+                  selectedCategory === category.name &&
+                    styles.categoryCard3x3Active,
                 ]}
                 onPress={() => handleCategoryPress(category.name)}
                 activeOpacity={0.8}
@@ -422,27 +481,37 @@ export default function HomeScreen() {
                 <View
                   style={[
                     styles.categoryIcon3x3,
-                    selectedCategory === category.name && styles.categoryIcon3x3Active,
+                    selectedCategory === category.name &&
+                      styles.categoryIcon3x3Active,
                   ]}
                 >
                   {category.type === "material" ? (
                     <MaterialCommunityIcons
                       name={category.icon as any}
                       size={28}
-                      color={selectedCategory === category.name ? "#fff" : PRIMARY_TEAL}
+                      color={
+                        selectedCategory === category.name
+                          ? "#fff"
+                          : PRIMARY_TEAL
+                      }
                     />
                   ) : (
                     <Ionicons
                       name={category.icon as any}
                       size={28}
-                      color={selectedCategory === category.name ? "#fff" : PRIMARY_TEAL}
+                      color={
+                        selectedCategory === category.name
+                          ? "#fff"
+                          : PRIMARY_TEAL
+                      }
                     />
                   )}
                 </View>
                 <Text
                   style={[
                     styles.categoryName3x3,
-                    selectedCategory === category.name && styles.categoryName3x3Active,
+                    selectedCategory === category.name &&
+                      styles.categoryName3x3Active,
                   ]}
                   numberOfLines={1}
                 >
@@ -503,7 +572,7 @@ export default function HomeScreen() {
                   <View style={styles.cardImageContainer}>
                     <View style={styles.cardImagePlaceholder}>
                       <Text style={styles.avatarText}>
-                        {(item.name ?? "?")
+                        {(item.company_name ?? "?")
                           .split(" ")
                           .map((n: string) => n[0])
                           .join("")}
@@ -511,14 +580,20 @@ export default function HomeScreen() {
                     </View>
                     {item.verified && (
                       <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark-circle" size={18} color={PRIMARY_TEAL} />
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={18}
+                          color={PRIMARY_TEAL}
+                        />
                       </View>
                     )}
                   </View>
 
                   <View style={styles.cardContent}>
                     <View style={styles.cardHeader}>
-                      <Text style={styles.providerName}>{item.name}</Text>
+                      <Text style={styles.providerName}>
+                        {item.company_name}
+                      </Text>
                       <View style={styles.ratingBadge}>
                         <Ionicons name="star" size={12} color={ACCENT_GOLD} />
                         <Text style={styles.ratingText}>{item.rating}</Text>
@@ -527,20 +602,34 @@ export default function HomeScreen() {
 
                     <View style={styles.cardMeta}>
                       <View style={styles.metaItem}>
-                        <Ionicons name="business-outline" size={14} color={TEXT_MUTED} />
+                        <Ionicons
+                          name="business-outline"
+                          size={14}
+                          color={TEXT_MUTED}
+                        />
                         <Text style={styles.metaText}>{item.category}</Text>
                       </View>
                       <View style={styles.metaDot} />
                       <View style={styles.metaItem}>
-                        <Ionicons name="location-outline" size={14} color={TEXT_MUTED} />
+                        <Ionicons
+                          name="location-outline"
+                          size={14}
+                          color={TEXT_MUTED}
+                        />
                         <Text style={styles.metaText}>{item.region}</Text>
                       </View>
                     </View>
 
                     <View style={styles.cardFooter}>
-                      <Text style={styles.reviewsText}>{item.reviews} reviews</Text>
+                      <Text style={styles.reviewsText}>
+                        {item.reviews} reviews
+                      </Text>
                       <View style={styles.arrowContainer}>
-                        <Ionicons name="arrow-forward" size={18} color={PRIMARY_TEAL} />
+                        <Ionicons
+                          name="arrow-forward"
+                          size={18}
+                          color={PRIMARY_TEAL}
+                        />
                       </View>
                     </View>
                   </View>
@@ -628,7 +717,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    color: "#FFBF00",  
+    color: "#FFBF00",
     fontSize: 18,
     marginBottom: 4,
   },
@@ -972,4 +1061,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
-}); 
+});

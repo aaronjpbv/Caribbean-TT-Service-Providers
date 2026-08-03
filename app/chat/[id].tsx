@@ -1,309 +1,254 @@
-import { supabase } from "@/utils/supabase";
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    useColorScheme,
-} from "react-native";
+// app/chat/[id].tsx
+import { useChat } from "@/hooks/useChat";
+import { supabase } from "@/lib/supabase";
+import { GroupedMessage, groupMessagesByDay } from "@/utils/chatHelpers";
+import { useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-interface Message {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  receiver_id: string;
-  content: string;
-  is_read: boolean;
-  created_at: string;
-}
+import ChatBubble from "@/components/ChatBubble";
+import ChatHeader from "@/components/ChatHeader";
+import DateSeparator from "@/components/DateSeparator";
+import MessageInput from "@/components/MessageInput";
+import TypingIndicator from "@/components/TypingIndicator";
 
+// ✅ Outer guard component — waits for auth to resolve
 export default function ChatScreen() {
   const { id: conversationId } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState("");
-  const [userId, setUserId] = useState<string | null>(null);
-  const [otherUserName, setOtherUserName] = useState("Chat");
-  const flatListRef = useRef<FlatList>(null);
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const colors = {
-    bg: isDark ? "#0F172A" : "#F8FAFC",
-    card: isDark ? "#1E293B" : "#FFFFFF",
-    text: isDark ? "#F1F5F9" : "#1F2937",
-    muted: isDark ? "#94A3B8" : "#6B7280",
-    border: isDark ? "#334155" : "#E5E7EB",
-    teal: "#0F6C7B",
-    myMessage: "#0F6C7B",
-    theirMessage: isDark ? "#334155" : "#E5E7EB",
-  };
+  const [authUid, setAuthUid] = useState<string | null>(null);
 
   useEffect(() => {
-    initializeChat();
+    // Bypass useAuth to ensure we get the real auth.uid() for RLS and presence
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setAuthUid(data.user.id);
+    });
   }, []);
 
-  const initializeChat = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      Alert.alert("Error", "Please sign in to chat");
-      router.back();
-      return;
-    }
-    setUserId(user.id);
-    fetchConversationDetails(user.id);
-    fetchMessages();
-    subscribeToMessages();
-    markMessagesAsRead(user.id);
-  };
-
-  const fetchConversationDetails = async (currentUserId: string) => {
-    const { data, error } = await supabase
-      .from("conversations")
-      .select(
-        `
-        *,
-        provider:providers(name),
-        customer:users(full_name)
-      `,
-      )
-      .eq("id", conversationId)
-      .single();
-
-    if (!error && data) {
-      const otherName =
-        data.provider_id === currentUserId
-          ? data.customer?.full_name
-          : data.provider?.name;
-      setOtherUserName(otherName || "Chat");
-    }
-  };
-
-  const fetchMessages = async () => {
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true });
-
-    if (!error) setMessages(data || []);
-  };
-
-  const subscribeToMessages = () => {
-    const channel = supabase
-      .channel(`chat:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages((prev) => [...prev, newMessage]);
-          if (newMessage.receiver_id === userId) {
-            markMessagesAsRead(userId!);
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const markMessagesAsRead = async (currentUserId: string) => {
-    await supabase
-      .from("messages")
-      .update({ is_read: true })
-      .eq("conversation_id", conversationId)
-      .eq("receiver_id", currentUserId)
-      .eq("is_read", false);
-  };
-
-  const sendMessage = async () => {
-    if (!inputText.trim() || !userId) return;
-
-    // Get receiver_id from conversation
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("provider_id, customer_id")
-      .eq("id", conversationId)
-      .single();
-
-    if (!conv) return;
-
-    const receiverId =
-      conv.provider_id === userId ? conv.customer_id : conv.provider_id;
-
-    const { error } = await supabase.from("messages").insert({
-      conversation_id: conversationId,
-      sender_id: userId,
-      receiver_id: receiverId,
-      content: inputText.trim(),
-    });
-
-    if (!error) {
-      setInputText("");
-    }
-  };
-
-  const renderMessage = ({ item }: { item: Message }) => {
-    const isMe = item.sender_id === userId;
-
+  if (!authUid) {
     return (
-      <View
-        style={[
-          styles.bubble,
-          isMe ? styles.myBubble : styles.theirBubble,
-          { backgroundColor: isMe ? colors.myMessage : colors.theirMessage },
-        ]}
-      >
-        <Text
-          style={[styles.messageText, { color: isMe ? "#fff" : colors.text }]}
-        >
-          {item.content}
-        </Text>
-        <Text
-          style={[
-            styles.timestamp,
-            { color: isMe ? "rgba(255,255,255,0.7)" : colors.muted },
-          ]}
-        >
-          {new Date(item.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
-      </View>
+      <SafeAreaView style={styles.center} edges={["top", "bottom"]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </SafeAreaView>
     );
-  };
+  }
+
+  // ✅ Now passing the guaranteed auth.uid()
+  return <ChatScreenInner conversationId={conversationId} userId={authUid} />;
+}
+
+// ✅ Inner component — only mounts once userId is guaranteed to be a real UUID
+function ChatScreenInner({
+  conversationId,
+  userId,
+}: {
+  conversationId: string;
+  userId: string;
+}) {
+  const {
+    messages,
+    loading,
+    sendMessage,
+    retryMessage,
+    setTyping,
+    isTyping,
+    isUserOnline, // ✅ NEW — from presence tracking in useChat.ts
+  } = useChat(conversationId, userId); // ✅ always a real UUID, never ""
+
+  const flatListRef = useRef<FlatList>(null);
+  const shouldScrollToEnd = useRef(true);
+
+  // ── Other participant's display info ──────────────────────────────────
+  const [otherName, setOtherName] = useState<string>("Chat");
+  const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
+  const [otherUserId, setOtherUserId] = useState<string | null>(null); // ✅ NEW
+  const [headerLoading, setHeaderLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOtherParticipant = async () => {
+      if (!conversationId || !userId) return;
+
+      setHeaderLoading(true);
+      try {
+        // 1. Get the conversation row to find customer_id / provider_id
+        const { data: convo, error: convoError } = await supabase
+          .from("conversations")
+          .select("customer_id, provider_id")
+          .eq("id", conversationId)
+          .single();
+
+        if (convoError || !convo) {
+          console.error("Error fetching conversation:", convoError);
+          setOtherName("Chat");
+          return;
+        }
+
+        const isCustomer = userId === convo.customer_id;
+
+        if (isCustomer) {
+          // I'm the customer — fetch the provider's company name + image
+          const { data: provider, error: providerError } = await supabase
+            .from("providers")
+            .select("company_name, image, user_id")
+            .eq("id", convo.provider_id)
+            .maybeSingle();
+
+          if (providerError) {
+            console.error("Error fetching provider:", providerError);
+          }
+
+          if (!provider) {
+            setOtherName("Provider");
+            return;
+          }
+
+          setOtherName(provider.company_name ?? "Provider");
+          setOtherAvatar(provider.image ?? null);
+          // ✅ Presence is keyed by auth user_id, so we need the
+          // provider's actual auth id, not providers.id, to check
+          // their online status correctly.
+          setOtherUserId(provider.user_id ?? null);
+        } else {
+          // I'm the provider — fetch the customer's name + avatar
+          const { data: customer, error: customerError } = await supabase
+            .from("users")
+            .select("full_name, avatar_url")
+            .eq("id", convo.customer_id)
+            .maybeSingle();
+
+          if (customerError) {
+            console.error("Error fetching customer:", customerError);
+          }
+
+          if (!customer) {
+            setOtherName("Customer");
+            return;
+          }
+
+          setOtherName(customer.full_name ?? "Customer");
+          setOtherAvatar(customer.avatar_url ?? null);
+          setOtherUserId(convo.customer_id); // already an auth user_id
+        }
+      } finally {
+        setHeaderLoading(false);
+      }
+    };
+
+    fetchOtherParticipant();
+  }, [conversationId, userId]);
+
+  const grouped = groupMessagesByDay(messages, userId);
+
+  // ✅ Real online status for the other participant, from presence
+  const otherIsOnline = otherUserId ? isUserOnline(otherUserId) : false;
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (shouldScrollToEnd.current && messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: GroupedMessage }) => {
+      if (item.type === "date") {
+        return <DateSeparator date={item.data as string} />;
+      }
+      const msg = item.data as any;
+      return (
+        <ChatBubble
+          message={msg}
+          isMe={item.isMe || false}
+          onRetry={retryMessage}
+        />
+      );
+    },
+    [retryMessage],
+  );
+
+  const keyExtractor = useCallback((item: GroupedMessage, index: number) => {
+    if (item.type === "date") return `date-${index}`;
+    return (item.data as any).id;
+  }, []);
+
+  const handleContentSizeChange = useCallback(() => {
+    if (shouldScrollToEnd.current) {
+      flatListRef.current?.scrollToEnd({ animated: false });
+    }
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    shouldScrollToEnd.current = false;
+  }, []);
+
+  // ✅ Handle send with error feedback
+  const handleSendMessage = useCallback(
+    async (text: string) => {
+      const { success, error } = await sendMessage(text);
+      if (!success && error) {
+        Alert.alert("Failed to send message", error);
+      }
+    },
+    [sendMessage],
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.center} edges={["top", "bottom"]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.container, { backgroundColor: colors.bg }]}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-    >
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.teal }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>{otherUserName}</Text>
-          <Text style={styles.headerStatus}>Online</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
-
-      {/* Messages */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messagesList}
-        onContentSizeChange={() =>
-          flatListRef.current?.scrollToEnd({ animated: false })
-        }
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <StatusBar style="dark" />
+      <ChatHeader
+        name={headerLoading ? "Loading..." : otherName}
+        avatar={otherAvatar ?? undefined}
+        isOnline={otherIsOnline} // ✅ real presence-based status
+        status={isTyping ? "typing..." : otherIsOnline ? "online" : "offline"}
       />
 
-      {/* Input */}
-      <View
-        style={[
-          styles.inputContainer,
-          { backgroundColor: colors.card, borderTopColor: colors.border },
-        ]}
-      >
-        <TextInput
-          style={[
-            styles.input,
-            { backgroundColor: colors.bg, color: colors.text },
-          ]}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Type a message..."
-          placeholderTextColor={colors.muted}
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, { backgroundColor: colors.teal }]}
-          onPress={sendMessage}
-          disabled={!inputText.trim()}
-        >
-          <Ionicons name="send" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      <FlatList
+        ref={flatListRef}
+        data={grouped}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.listContent}
+        onContentSizeChange={handleContentSizeChange}
+        onScrollBeginDrag={handleScroll}
+        onEndReached={() => {
+          shouldScrollToEnd.current = true;
+        }}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        ListFooterComponent={isTyping ? <TypingIndicator /> : null}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+        }}
+      />
+
+      <MessageInput onSend={handleSendMessage} onTyping={setTyping} />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  backBtn: { padding: 8 },
-  headerInfo: { flex: 1, alignItems: "center" },
-  headerName: { fontSize: 18, fontWeight: "700", color: "#fff" },
-  headerStatus: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 2 },
-  messagesList: { padding: 16, paddingBottom: 20 },
-  bubble: {
-    maxWidth: "75%",
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 8,
-  },
-  myBubble: {
-    alignSelf: "flex-end",
-    borderBottomRightRadius: 4,
-  },
-  theirBubble: {
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 4,
-  },
-  messageText: { fontSize: 15, lineHeight: 20 },
-  timestamp: { fontSize: 11, marginTop: 4, alignSelf: "flex-end" },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-  },
-  input: {
+  container: {
     flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    maxHeight: 100,
-    fontSize: 15,
+    backgroundColor: "#E5DDD5", // WhatsApp chat background
   },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  center: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 8,
+    backgroundColor: "#E5DDD5",
+  },
+  listContent: {
+    paddingVertical: 8,
   },
 });

@@ -14,7 +14,10 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ headerShown: false }} />
       <Tabs.Screen name="bookings" options={{ title: "Bookings" }} />
-      <Tabs.Screen name="messages" options={{ title: "Messages" }} />
+      <Tabs.Screen
+        name="messages"
+        options={{ title: "Messages", headerShown: false }}
+      />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );

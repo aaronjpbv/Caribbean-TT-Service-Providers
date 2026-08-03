@@ -72,7 +72,23 @@ const LoginScreen: React.FC = () => {
         console.log("Login successful:", data.user);
         // Clear guest status on real login
         await AsyncStorage.removeItem("isGuest");
-        router.replace("/(tabs)");
+
+        // --- NEW ROUTING LOGIC ---
+        // Query the providers table to check if this user is a provider.
+        // NOTE: Change "user_id" below if your foreign key column linking to auth.users is named differently (e.g., "id").
+        const { data: providerData, error: providerError } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", data.user.id) // Assuming the provider 'id' matches the auth 'user.id'. Adjust if needed.
+          .maybeSingle();
+
+        if (providerData) {
+          // If a record exists, navigate to the provider dashboard
+          router.replace("/provider-dashboard");
+        } else {
+          // If no provider record exists, navigate to the standard user tabs
+          router.replace("/(tabs)");
+        }
       }
     } catch (error) {
       Alert.alert("Error", "Something went wrong. Please try again.");

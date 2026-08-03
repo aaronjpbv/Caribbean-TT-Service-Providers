@@ -65,7 +65,7 @@ export default function MessagesScreen() {
         .select(
           `
           *,
-          provider:providers(name),
+          provider:providers(company_name),
           customer:users(full_name)
         `,
         )
@@ -76,7 +76,7 @@ export default function MessagesScreen() {
 
       const formatted = (data || []).map((conv: any) => ({
         ...conv,
-        provider_name: conv.provider?.name,
+        provider_name: conv.provider?.company_name,
         customer_name: conv.customer?.full_name,
       }));
 
@@ -127,7 +127,7 @@ export default function MessagesScreen() {
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const otherName = getOtherPartyName(item);
-    const isUnread = item.unread_count && item.unread_count > 0;
+    const isUnread = (item.unread_count ?? 0) > 0;
 
     return (
       <Link href={`../chat/${item.id}`} asChild>

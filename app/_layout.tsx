@@ -22,6 +22,15 @@ export default function RootLayout() {
             options={{ title: "Details", headerShown: false }}
           />
           <Stack.Screen name="+not-found" />
+          <Stack.Screen
+            name="provider-dashboard"
+            options={{ headerShown: false }}
+          />
+
+          <Stack.Screen
+            name="chat"
+            options={{ title: "Chat", headerShown: false }}
+          />
         </Stack>
       </SafeAreaProvider>
     </>

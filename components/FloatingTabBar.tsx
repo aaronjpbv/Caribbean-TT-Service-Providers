@@ -1,6 +1,8 @@
 // components/FloatingTabBar.tsx
+import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -35,10 +37,65 @@ const TABS = [
   },
 ];
 
+// ✅ Role is now one of these three states instead of a plain boolean.
+// "loading" prevents a flash of the wrong bar (or the bar disappearing/
+// reappearing) while we wait on the auth + profile lookup.
+type Role = "guest" | "customer" | "provider" | "loading";
+
 export default function FloatingTabBar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [role, setRole] = useState<Role>("loading");
+
+  useEffect(() => {
+    const checkRole = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        // ✅ No logged-in user = guest
+        setRole("guest");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setRole(profile?.role === "provider" ? "provider" : "customer");
+    };
+
+    checkRole();
+  }, []);
+
+  // ✅ Home tab still needs to be role-aware for customers, but since
+  // providers never see this bar at all, this only really matters
+  // for the guest/customer branches now.
+  const handleHomePress = () => {
+    router.push("/(tabs)/" as any);
+  };
+
+  // ✅ Guests can't chat at all — block navigation to Messages and
+  // send them to login instead.
+  const handleMessagesPress = () => {
+    if (role === "guest") {
+      router.push("/sign-in" as any);
+      return;
+    }
+    router.push("/(tabs)/messages" as any);
+  };
+
+  // ✅ Providers don't get the floating tab bar at all. Also render
+  // nothing while we're still resolving the role, so it doesn't
+  // flash in for a provider before disappearing.
+  if (role === "provider" || role === "loading") {
+    return null;
+  }
 
   return (
     <View style={[styles.wrapper, { paddingBottom: insets.bottom + 8 }]}>
@@ -48,11 +105,17 @@ export default function FloatingTabBar() {
           const isActive =
             pathname === tab.route ||
             (tab.name === "index" && pathname === "/");
+
+          const onPress =
+            tab.name === "index"
+              ? handleHomePress
+              : () => router.push(tab.route as any);
+
           return (
             <TouchableOpacity
               key={tab.name}
               style={styles.tabItem}
-              onPress={() => router.push(tab.route as any)}
+              onPress={onPress}
             >
               <Ionicons
                 name={(isActive ? tab.activeIcon : tab.icon) as any}
@@ -66,11 +129,8 @@ export default function FloatingTabBar() {
           );
         })}
 
-        {/* Center logo button — Post a Job */}
-        <TouchableOpacity
-          style={styles.centerBtn}
-          onPress={() => router.push("/(tabs)/index.tsx" as any)}
-        >
+        {/* Center logo button */}
+        <TouchableOpacity style={styles.centerBtn} onPress={handleHomePress}>
           <Image
             source={require("../assets/images/logo.png")}
             style={styles.logo}
@@ -78,14 +138,19 @@ export default function FloatingTabBar() {
           />
         </TouchableOpacity>
 
-        {/* Right two tabs */}
+        {/* Right two tabs — Messages is intercepted for guests */}
         {TABS.slice(2, 4).map((tab) => {
           const isActive = pathname === tab.route;
+          const onPress =
+            tab.name === "messages"
+              ? handleMessagesPress
+              : () => router.push(tab.route as any);
+
           return (
             <TouchableOpacity
               key={tab.name}
               style={styles.tabItem}
-              onPress={() => router.push(tab.route as any)}
+              onPress={onPress}
             >
               <Ionicons
                 name={(isActive ? tab.activeIcon : tab.icon) as any}
