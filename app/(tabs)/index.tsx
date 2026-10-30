@@ -77,7 +77,7 @@ const categories: Category[] = [
   },
   {
     id: "hvac",
-    name: "AC Services",
+    name: "HVAC", 
     icon: "air-conditioner",
     type: "material",
   },

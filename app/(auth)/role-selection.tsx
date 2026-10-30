@@ -30,7 +30,7 @@ const ROLES = [
 export default function RoleSelectionScreen() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<
-    "customer" | "provider" | null
+    "customer" | "provider" | "Hardware" / null 
   >(null);
   const isDark = useColorScheme() === "dark";
 
@@ -41,6 +41,16 @@ export default function RoleSelectionScreen() {
       router.push("/(auth)/sign-up");
     }
   };
+
+   if (selectedRole === "Hardware") {
+    router.push("../../(auth)/hardware-register"); 
+   }
+   else {
+    router.push("/(auth)/sign-up");
+   }
+
+   
+
 
   return (
     <SafeAreaView

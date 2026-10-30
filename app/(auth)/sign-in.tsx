@@ -242,7 +242,7 @@ const LoginScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.guestButton}
                 onPress={handleGuestLogin}
-                activeOpacity={0.8}
+                activeOpacity={0.8} 
               >
                 <Ionicons
                   name="person-outline"

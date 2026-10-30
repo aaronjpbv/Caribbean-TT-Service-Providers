@@ -6,7 +6,7 @@ export default function ProfileLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => { 
       setIsAuthenticated(!!session);
     });
   }, []);

@@ -20,7 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const THEME = {
-  primary: "#0F6C7B",
+  primary: "#1d3557", 
   primaryLight: "#E8F4F4",
   surface: "#FFFFFF",
   background: "#F8FAFC",
@@ -122,13 +122,15 @@ const RoleSelector: React.FC<{
     () => [
       { value: "client", label: "Client", icon: "person" },
       { value: "provider", label: "Provider", icon: "briefcase" },
+      { value:"hardware", label: "Hardware", icon: "construct-outline" }
     ],
     [],
   );
 
+   
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>I'm joining as</Text>
+      <Text style={styles.label}>Select role  </Text>  
       <View style={styles.roleRow}>
         {roles.map((role) => {
           const isActive = selectedRole === role.value;
@@ -338,18 +340,25 @@ export default function SignUpScreen() {
       }
 
       // Step 3: Navigate based on role
+      // If Provider// 
       router.replace(
         (selectedRole === "provider"
           ? "/(auth)/complete-provider-sign-up"
           : "/(tabs)/index") as Href,
       );
+
+
+      // if Hardware, navigate to hardware registration
+      if (selectedRole === "Hardware") {
+        router.push("/(auth)/hardware-register");
+      }
     } catch (err: any) {
       console.error("SignUp error:", err);
       showError(err.message || "Failed to create account. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [form, selectedRole, router, validateForm, clearGeneralError, showError]);
+  }, [form, selectedRole, router, validateForm, clearGeneralError, showError]); 
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
@@ -705,4 +714,4 @@ const styles = StyleSheet.create({
     color: THEME.primary,
     fontWeight: "600",
   },
-});
+}); 

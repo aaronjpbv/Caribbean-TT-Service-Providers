@@ -1,14 +1,13 @@
 // app/(tabs)/_layout.tsx
 import { Tabs } from "expo-router";
 import FloatingTabBar from "../../components/FloatingTabBar";
-
 export default function TabLayout() {
   return (
     <Tabs
       tabBar={() => <FloatingTabBar />}
       screenOptions={{
         headerStyle: { backgroundColor: "#1B2B4B" },
-        headerTintColor: "#fff",
+        headerTintColor: "#fff", 
         headerTitleStyle: { fontWeight: "bold" },
       }}
     >
